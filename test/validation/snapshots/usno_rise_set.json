@@ -1,0 +1,62 @@
+{
+  "_source": "U.S. Naval Observatory (aa.usno.navy.mil) rstt/oneday API — ground truth",
+  "_tolerance_minutes": 2,
+  "_convention": "times are LOCAL wall-clock HH:MM at the given tzHours offset; null = event does not occur that day (polar); omitted key = not validated",
+  "_note": "moon arrays hold every occurrence within the local day; [] means the event provably does not occur",
+  "snapshots": [
+    {
+      "name": "New York — June solstice (DST, N mid-lat)",
+      "lat": 40.7128, "lon": -74.0060, "date": "2026-06-21", "tzHours": -4,
+      "sun": { "civilDawn": "04:52", "sunrise": "05:25", "transit": "12:58", "sunset": "20:31", "civilDusk": "21:04" },
+      "moon": { "rise": ["12:50"], "set": ["00:29"], "upperTransit": ["18:55"], "illumPct": 48 }
+    },
+    {
+      "name": "New York — December solstice (EST)",
+      "lat": 40.7128, "lon": -74.0060, "date": "2026-12-21", "tzHours": -5,
+      "sun": { "civilDawn": "06:46", "sunrise": "07:17", "transit": "11:54", "sunset": "16:32", "civilDusk": "17:03" },
+      "moon": { "rise": ["14:00"], "set": ["04:35"], "upperTransit": ["21:52"], "illumPct": 92 }
+    },
+    {
+      "name": "Istanbul — spring equinox (flagship, no DST)",
+      "lat": 41.0082, "lon": 28.9784, "date": "2026-03-20", "tzHours": 3,
+      "sun": { "civilDawn": "06:40", "sunrise": "07:08", "transit": "13:12", "sunset": "19:16", "civilDusk": "19:43" },
+      "moon": { "rise": ["07:32"], "set": ["21:11"], "upperTransit": ["14:15"], "illumPct": 2 }
+    },
+    {
+      "name": "Istanbul — June solstice",
+      "lat": 41.0082, "lon": 28.9784, "date": "2026-06-21", "tzHours": 3,
+      "sun": { "civilDawn": "04:58", "sunrise": "05:32", "transit": "13:06", "sunset": "20:40", "civilDusk": "21:13" },
+      "moon": { "rise": ["12:39"], "set": ["00:31"], "upperTransit": ["18:51"], "illumPct": 45 }
+    },
+    {
+      "name": "Istanbul — December solstice",
+      "lat": 41.0082, "lon": 28.9784, "date": "2026-12-21", "tzHours": 3,
+      "sun": { "civilDawn": "07:54", "sunrise": "08:25", "transit": "13:02", "sunset": "17:39", "civilDusk": "18:10" },
+      "moon": { "rise": ["14:54"], "set": ["05:21"], "upperTransit": ["22:42"], "illumPct": 89 }
+    },
+    {
+      "name": "Sydney — June solstice (S hemisphere, winter)",
+      "lat": -33.8688, "lon": 151.2093, "date": "2026-06-21", "tzHours": 10,
+      "sun": { "civilDawn": "06:32", "sunrise": "07:00", "transit": "11:57", "sunset": "16:54", "civilDusk": "17:22" },
+      "moon": { "rise": ["11:25"], "set": ["23:39"], "upperTransit": ["17:28"], "illumPct": 41 }
+    },
+    {
+      "name": "Singapore — spring equinox (equatorial)",
+      "lat": 1.3521, "lon": 103.8198, "date": "2026-03-20", "tzHours": 8,
+      "sun": { "civilDawn": "06:48", "sunrise": "07:09", "transit": "13:12", "sunset": "19:15", "civilDusk": "19:36" },
+      "moon": { "rise": ["07:53"], "set": ["20:18"], "upperTransit": ["14:05"], "illumPct": 2 }
+    },
+    {
+      "name": "Anchorage — June solstice (midnight sun, no civil twilight)",
+      "lat": 61.2181, "lon": -149.9003, "date": "2026-06-21", "tzHours": -8,
+      "sun": { "civilDawn": null, "sunrise": "04:20", "transit": "14:02", "sunset": "23:43", "civilDusk": null },
+      "moon": { "rise": ["14:17"], "set": ["01:40"], "upperTransit": ["20:08"], "illumPct": 49 }
+    },
+    {
+      "name": "Tromso — December solstice (polar night; civil twilight only)",
+      "lat": 69.6492, "lon": 18.9553, "date": "2026-12-21", "tzHours": 1,
+      "sun": { "civilDawn": "09:31", "sunrise": null, "sunset": null, "civilDusk": "13:53" },
+      "moon": { "rise": [], "set": [], "upperTransit": ["21:24"], "lowerTransit": ["08:53"], "illumPct": 90 }
+    }
+  ]
+}
