@@ -55,4 +55,5 @@ app.*.map.json
 
 # Strateji iceren dosyalar - repoda tutulmaz (yerelde durur)
 /README.md
-/docs/
+/docs/*
+!/docs/privacy-policy.md
