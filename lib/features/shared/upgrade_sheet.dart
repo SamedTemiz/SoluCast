@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
-import 'entitlement.dart';
+import '../paywall/paywall_screen.dart';
 
-/// Kilitli bir Pro özelliğine dokunulduğunda gösterilen teaser sheet.
-/// Gerçek satın alma akışı yok (RevenueCat Hafta 4) — burada yalnızca "Pro
-/// Preview" dev-toggle'ını açmayı teklif eder, şeffafça etiketlenir.
-void showUpgradeTeaser(BuildContext context, WidgetRef ref, {required String feature}) {
+/// Kilitli bir Pro özelliğine dokunulduğunda gösterilen hafif teaser sheet.
+/// Monetizasyon hunisi: teaser → tam [PaywallScreen] (fiyat/karşılaştırma
+/// orada). Satın alma RevenueCat gelene kadar paywall içinde Pro-preview
+/// olarak şeffafça işaretlenir.
+void showUpgradeTeaser(BuildContext context, WidgetRef ref,
+    {required String feature}) {
   final scheme = Theme.of(context).colorScheme;
   final moss = SoluPalette.of(context).neonMoss;
   showModalBottomSheet(
@@ -47,19 +49,23 @@ void showUpgradeTeaser(BuildContext context, WidgetRef ref, {required String fea
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               onPressed: () {
-                ref.read(isProPreviewProvider.notifier).set(true);
-                Navigator.of(sheetContext).pop();
+                final navigator = Navigator.of(sheetContext);
+                navigator.pop();
+                navigator.push(MaterialPageRoute(
+                  builder: (_) => const PaywallScreen(),
+                ));
               },
-              child: const Text('Enable Pro Preview'),
+              child: const Text('See Pro plans'),
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Purchases aren\'t wired up yet — this toggles a local preview flag.',
-            style: Theme.of(context)
-                .textTheme
-                .labelSmall
-                ?.copyWith(color: scheme.onSurfaceVariant),
+          TextButton(
+            onPressed: () => Navigator.of(sheetContext).pop(),
+            child: Text('Not now',
+                style: Theme.of(context)
+                    .textTheme
+                    .labelLarge
+                    ?.copyWith(color: scheme.onSurfaceVariant)),
           ),
         ],
       ),

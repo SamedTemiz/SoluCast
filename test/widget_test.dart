@@ -133,9 +133,20 @@ void main() {
     expect(find.byIcon(Icons.lock_outline), findsWidgets);
     expect(find.text('ACTIVE'), findsOneWidget); // yalnız İstanbul aktif
 
-    // Kilitli karta dokunma → upgrade teaser (aktif konum DEĞİŞMEZ).
+    // Kilitli karta dokunma → teaser → tam paywall hunisi.
     await tester.tap(find.text('Sydney'));
     await tester.pumpAndSettle();
-    expect(find.text('Enable Pro Preview'), findsOneWidget);
+    expect(find.text('See Pro plans'), findsOneWidget);
+
+    await tester.tap(find.text('See Pro plans'));
+    await tester.pumpAndSettle();
+    expect(find.text('Fish smarter with Pro'), findsOneWidget);
+    expect(find.text('2 MONTHS FREE'), findsOneWidget); // yıllık öne çıkan
+
+    // Trial başlat (şimdilik Pro preview) → kilitler kalkmalı.
+    await tester.tap(find.text('Start 7-day free trial'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.lock_outline), findsNothing);
+    expect(find.text('ACTIVE'), findsOneWidget);
   });
 }

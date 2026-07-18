@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/home/home_shell.dart';
+import '../features/onboarding/onboarding_screen.dart';
 import 'theme.dart';
 
-class SoluCastApp extends StatelessWidget {
+class SoluCastApp extends ConsumerWidget {
   const SoluCastApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // İlk açılışta onboarding (screens.md §1); tamamlanınca kalıcı olarak Home.
+    final onboarded = ref.watch(onboardingDoneProvider);
+
     return MaterialApp(
       title: 'SoluCast',
       debugShowCheckedModeBanner: false,
@@ -24,7 +29,7 @@ class SoluCastApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const HomeShell(),
+      home: onboarded ? const HomeShell() : const OnboardingScreen(),
     );
   }
 }
