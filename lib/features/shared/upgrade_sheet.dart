@@ -13,7 +13,9 @@ void showUpgradeTeaser(BuildContext context, WidgetRef ref, {required String fea
   showModalBottomSheet(
     context: context,
     showDragHandle: true,
-    builder: (sheetContext) => Padding(
+    // Küçük/yatay ekranlarda içerik sığmazsa taşmak yerine kaydırılır.
+    isScrollControlled: true,
+    builder: (sheetContext) => SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,

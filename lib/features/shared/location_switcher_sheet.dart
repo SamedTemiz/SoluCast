@@ -215,10 +215,14 @@ class _AddLocationSheetState extends ConsumerState<_AddLocationSheet> {
       if (mounted) {
         final state = ref.read(locationsProvider);
         final isPro = ref.read(isProPreviewProvider);
+        final atFreeLimit = isLocationAddLocked(
+            currentCount: state.locations.length, isPro: isPro);
+        // Aktif kayıt zaten cihaz konumuysa GPS onu tazeler (her katmanda):
+        // aynı görünen ad üretilirse add() sessiz no-op olur ve yeni
+        // koordinatlar kaybolurdu. Free limitte de tek hak güncellenir.
         _pick(
           loc,
-          replaceActive: isLocationAddLocked(
-              currentCount: state.locations.length, isPro: isPro),
+          replaceActive: atFreeLimit || state.active.isDeviceLocation,
         );
       }
     } on LocationFailure catch (e) {

@@ -89,13 +89,20 @@ class LocationsController extends Notifier<LocationsState> {
 
   /// Aktif kaydı GPS'ten gelen konumla günceller. Böylece ücretsiz plandaki
   /// tek favori konum sınırı, "mevcut konumum" kullanımını engellemez.
+  ///
+  /// Konumlar `name` ile anahtarlandığından, yeni ad başka bir kayıtla
+  /// çakışırsa (ör. GPS adı bir preset'le aynı) kopya isim seçim/silmeyi
+  /// belirsizleştirir — çakışan diğer kayıtlar listeden düşürülür.
   void replaceActive(SavedLocation location) {
     final index = state.locations.indexWhere((l) => l.name == state.activeName);
     if (index < 0) return;
 
-    final locations = [...state.locations];
-    locations[index] = location;
-    state = LocationsState(locations: locations, activeName: location.name);
+    final replaced = [...state.locations]..[index] = location;
+    final deduped = <SavedLocation>[
+      for (var i = 0; i < replaced.length; i++)
+        if (i == index || replaced[i].name != location.name) replaced[i],
+    ];
+    state = LocationsState(locations: deduped, activeName: location.name);
     _persist();
   }
 

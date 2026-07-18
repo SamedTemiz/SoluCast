@@ -113,4 +113,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.lock_outline), findsNothing);
   });
+
+  testWidgets('Free kullanıcıda ikinci kayıtlı konum kilitli görünür',
+      (tester) async {
+    // Pro-preview döneminden kalan 2 kayıt + Pro kapalı senaryosu.
+    await pumpApp(tester, prefs: {
+      PrefKeys.locations:
+          '[{"name":"İstanbul","lat":41.0082,"lon":28.9784,"tz":"Europe/Istanbul","isDeviceLocation":false},'
+          '{"name":"Sydney","lat":-33.8688,"lon":151.2093,"tz":"Australia/Sydney","isDeviceLocation":false}]',
+      PrefKeys.activeLocation: 'İstanbul',
+      PrefKeys.proPreview: false,
+    });
+
+    await tester.tap(find.text('Konumlar'));
+    await tester.pumpAndSettle();
+
+    // İkinci kayıt silinmemiş ama kilitli: kart listede + kilit ikonu var.
+    expect(find.text('Sydney'), findsOneWidget);
+    expect(find.byIcon(Icons.lock_outline), findsWidgets);
+    expect(find.text('ACTIVE'), findsOneWidget); // yalnız İstanbul aktif
+
+    // Kilitli karta dokunma → upgrade teaser (aktif konum DEĞİŞMEZ).
+    await tester.tap(find.text('Sydney'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enable Pro Preview'), findsOneWidget);
+  });
 }
