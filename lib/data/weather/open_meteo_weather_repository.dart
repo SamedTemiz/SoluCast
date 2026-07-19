@@ -15,7 +15,8 @@ import 'weather_repository.dart';
 /// - Ağ hatasında **eski cache** döner (offline fallback, F3.3); hiç veri yoksa null.
 ///
 /// [client] test için enjekte edilebilir (gerçek ağ olmadan parse doğrulaması).
-class OpenMeteoWeatherRepository implements WeatherRepository {
+class OpenMeteoWeatherRepository
+    implements WeatherRepository, HourlyWeatherRepository {
   OpenMeteoWeatherRepository({
     required this.prefs,
     http.Client? client,
@@ -58,6 +59,65 @@ class OpenMeteoWeatherRepository implements WeatherRepository {
     }
   }
 
+  @override
+  Future<List<HourlyWeatherData>> fetchHourly(
+    SavedLocation location,
+    DateTime localDate,
+  ) async {
+    final date =
+        '${localDate.year.toString().padLeft(4, '0')}-${localDate.month.toString().padLeft(2, '0')}-${localDate.day.toString().padLeft(2, '0')}';
+    try {
+      final uri = Uri.https(_host, '/v1/forecast', {
+        'latitude': location.latitude.toString(),
+        'longitude': location.longitude.toString(),
+        'hourly':
+            'temperature_2m,wind_speed_10m,precipitation_probability,weather_code',
+        'start_date': date,
+        'end_date': date,
+        'timezone': location.timeZoneId,
+      });
+      final response = await _client
+          .get(uri)
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode != 200) return const [];
+      return parseHourlyResponse(response.body);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  static List<HourlyWeatherData> parseHourlyResponse(String body) {
+    try {
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      final hourly = json['hourly'] as Map<String, dynamic>;
+      final times = hourly['time'] as List;
+      final temperatures = hourly['temperature_2m'] as List;
+      final winds = hourly['wind_speed_10m'] as List;
+      final precipitation = hourly['precipitation_probability'] as List;
+      final codes = hourly['weather_code'] as List;
+      final count = [
+        times.length,
+        temperatures.length,
+        winds.length,
+        precipitation.length,
+        codes.length,
+      ].reduce((a, b) => a < b ? a : b);
+      return List.generate(
+        count,
+        (index) => HourlyWeatherData(
+          localTime: DateTime.parse(times[index] as String),
+          temperatureC: (temperatures[index] as num).toDouble(),
+          windSpeedKmh: (winds[index] as num).toDouble(),
+          precipitationProbabilityPct:
+              (precipitation[index] as num?)?.toInt() ?? 0,
+          weatherCode: (codes[index] as num).toInt(),
+        ),
+      );
+    } catch (_) {
+      return const [];
+    }
+  }
+
   /// HTTP gövdesini [WeatherData]'ya çevirir (saf; testte doğrudan çağrılır).
   static WeatherData? parseResponse(String body) {
     try {
@@ -69,7 +129,8 @@ class OpenMeteoWeatherRepository implements WeatherRepository {
           .whereType<num>()
           .map((e) => e.toDouble())
           .toList();
-      final precipProbs = (hourly['precipitation_probability'] as List?)
+      final precipProbs =
+          (hourly['precipitation_probability'] as List?)
               ?.map((e) => (e as num?)?.toInt() ?? 0)
               .toList() ??
           const <int>[];
@@ -79,8 +140,9 @@ class OpenMeteoWeatherRepository implements WeatherRepository {
         windSpeedKmh: (current['wind_speed_10m'] as num).toDouble(),
         windDirectionDeg: (current['wind_direction_10m'] as num).toInt(),
         cloudCoverPct: (current['cloud_cover'] as num).toInt(),
-        precipitationProbabilityPct:
-            precipProbs.isNotEmpty ? precipProbs.last : 0,
+        precipitationProbabilityPct: precipProbs.isNotEmpty
+            ? precipProbs.last
+            : 0,
         pressureHpa: (current['surface_pressure'] as num).toDouble(),
         pressureTrend: classifyPressureTrend(pressures),
         fetchedAt: DateTime.now().toUtc(),

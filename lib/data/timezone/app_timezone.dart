@@ -27,7 +27,12 @@ class AppTimeZone {
     ensureInitialized();
     final location = tz.getLocation(timeZoneId);
     final noon = tz.TZDateTime(
-        location, localDate.year, localDate.month, localDate.day, 12);
+      location,
+      localDate.year,
+      localDate.month,
+      localDate.day,
+      12,
+    );
     return noon.timeZoneOffset;
   }
 

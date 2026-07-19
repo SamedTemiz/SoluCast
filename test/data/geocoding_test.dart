@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:solucast/data/location/geocoding_repository.dart';
+import 'package:angler_pulse/data/location/geocoding_repository.dart';
 
 void main() {
   group('parseResults', () {

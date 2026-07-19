@@ -10,12 +10,13 @@ final geocodingRepositoryProvider = Provider<GeocodingRepository>(
 );
 
 /// GPS konum servisi.
-final locationServiceProvider =
-    Provider<LocationService>((ref) => const LocationService());
+final locationServiceProvider = Provider<LocationService>(
+  (ref) => const LocationService(),
+);
 
 /// Arama sorgusuna göre konum sonuçları (debounce çağıran tarafta).
 final geocodingSearchProvider =
     FutureProvider.family<List<SavedLocation>, String>((ref, query) async {
-  if (query.trim().length < 2) return const [];
-  return ref.watch(geocodingRepositoryProvider).search(query);
-});
+      if (query.trim().length < 2) return const [];
+      return ref.watch(geocodingRepositoryProvider).search(query);
+    });

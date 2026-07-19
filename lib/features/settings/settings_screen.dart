@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../app/localization.dart';
 import '../../app/theme.dart';
 import '../../core/core.dart';
+import '../notifications/notification_providers.dart';
 import '../shared/entitlement.dart';
 import '../shared/widgets/reveal.dart';
 import '../today/today_format.dart';
 import 'settings_providers.dart';
 
-/// Ayarlar sekmesi (screens.md §6). Bazı satırlar gerçekten çalışır (24s
-/// formatı, Pro preview, bildirim aç/kapa durumu); bazıları henüz veri
-/// katmanı olmadığı için stub'dır — bu açıkça alt metinlerde belirtilir.
+const _privacyPolicyUrl =
+    'https://github.com/SamedTemiz/AnglerPulse/blob/main/docs/privacy-policy.md';
+
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -20,19 +24,51 @@ class SettingsScreen extends ConsumerWidget {
     final use24h = ref.watch(use24hProvider);
     final units = ref.watch(unitsProvider);
     final notif = ref.watch(notificationSettingsProvider);
+    final themeMode = ref.watch(themePreferenceProvider);
+    final language = ref.watch(languagePreferenceProvider);
     final scheme = Theme.of(context).colorScheme;
     final moss = SoluPalette.of(context).neonMoss;
 
+    Future<void> setNotification(bool enabled, void Function() update) async {
+      if (!enabled) {
+        update();
+        return;
+      }
+      final service = ref.read(notificationServiceProvider);
+      await service.initialize();
+      final granted = await service.requestPermissions();
+      if (granted) {
+        update();
+      } else if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              context.l10n(
+                'Notifications are not enabled. This alert will stay off.',
+                'Bildirim izni verilmedi. Bu uyarı kapalı kalacak.',
+              ),
+            ),
+            action: SnackBarAction(
+              label: context.l10n('Open settings', 'Ayarları aç'),
+              onPressed: () => Geolocator.openAppSettings(),
+            ),
+          ),
+        );
+      }
+    }
+
     return SafeArea(
+      top: false,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           Reveal(
-            child: Text('Settings',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineMedium
-                    ?.copyWith(fontSize: 24)),
+            child: Text(
+              context.l10n('Settings', 'Ayarlar'),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontSize: 24),
+            ),
           ),
           const SizedBox(height: 16),
           Reveal(
@@ -41,15 +77,22 @@ class SettingsScreen extends ConsumerWidget {
               child: SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 activeThumbColor: moss,
-                title: const Text('Pro Preview'),
+                title: Text(context.l10n('Pro Preview', 'Pro Önizleme')),
                 subtitle: Text(
                   isPro
-                      ? 'All Pro gates unlocked for testing.'
-                      : 'Purchases aren\'t wired up yet — this is a local dev toggle.',
+                      ? context.l10n(
+                          'Pro-only features are unlocked for testing.',
+                          'Pro işlevleri test için açık.',
+                        )
+                      : context.l10n(
+                          'Local test switch; subscriptions are added later.',
+                          'Yerel test anahtarı; abonelikler daha sonra eklenecek.',
+                        ),
                   style: TextStyle(color: scheme.onSurfaceVariant),
                 ),
                 value: isPro,
-                onChanged: (v) => ref.read(isProPreviewProvider.notifier).set(v),
+                onChanged: (value) =>
+                    ref.read(isProPreviewProvider.notifier).set(value),
               ),
             ),
           ),
@@ -57,49 +100,59 @@ class SettingsScreen extends ConsumerWidget {
           Reveal(
             delay: const Duration(milliseconds: 80),
             child: _SectionCard(
-              title: 'UNITS & FORMAT',
+              title: context.l10n('UNITS & FORMAT', 'BİRİMLER VE BİÇİM'),
               child: Column(
                 children: [
                   _PrefRow(
-                    title: 'Units',
-                    subtitle: 'Wired once the weather layer lands',
+                    title: context.l10n('Units', 'Birimler'),
+                    subtitle: context.l10n(
+                      'Applied to temperature, wind and pressure.',
+                      'Sıcaklık, rüzgâr ve basınç değerlerine uygulanır.',
+                    ),
                     control: SegmentedButton<UnitSystem>(
                       showSelectedIcon: false,
                       style: const ButtonStyle(
                         visualDensity: VisualDensity.compact,
                         padding: WidgetStatePropertyAll(
-                            EdgeInsets.symmetric(horizontal: 14)),
+                          EdgeInsets.symmetric(horizontal: 14),
+                        ),
                       ),
                       segments: const [
                         ButtonSegment(
-                            value: UnitSystem.imperial, label: Text('°F')),
+                          value: UnitSystem.imperial,
+                          label: Text('°F'),
+                        ),
                         ButtonSegment(
-                            value: UnitSystem.metric, label: Text('°C')),
+                          value: UnitSystem.metric,
+                          label: Text('°C'),
+                        ),
                       ],
                       selected: {units},
-                      onSelectionChanged: (s) =>
-                          ref.read(unitsProvider.notifier).set(s.first),
+                      onSelectionChanged: (selection) =>
+                          ref.read(unitsProvider.notifier).set(selection.first),
                     ),
                   ),
                   const Divider(height: 24),
                   _PrefRow(
-                    title: 'Time format',
+                    title: context.l10n('Time format', 'Saat biçimi'),
                     subtitle:
-                        'Example: ${TodayFormat(Duration.zero, use24h: use24h).time(DateTime.utc(2026, 1, 1, 17, 5))}',
+                        '${context.l10n('Example', 'Örnek')}: ${TodayFormat(Duration.zero, use24h: use24h).time(DateTime.utc(2026, 1, 1, 17, 5))}',
                     control: SegmentedButton<bool>(
                       showSelectedIcon: false,
                       style: const ButtonStyle(
                         visualDensity: VisualDensity.compact,
                         padding: WidgetStatePropertyAll(
-                            EdgeInsets.symmetric(horizontal: 14)),
+                          EdgeInsets.symmetric(horizontal: 14),
+                        ),
                       ),
                       segments: const [
                         ButtonSegment(value: false, label: Text('12h')),
                         ButtonSegment(value: true, label: Text('24h')),
                       ],
                       selected: {use24h},
-                      onSelectionChanged: (s) =>
-                          ref.read(use24hProvider.notifier).set(s.first),
+                      onSelectionChanged: (selection) => ref
+                          .read(use24hProvider.notifier)
+                          .set(selection.first),
                     ),
                   ),
                 ],
@@ -110,36 +163,73 @@ class SettingsScreen extends ConsumerWidget {
           Reveal(
             delay: const Duration(milliseconds: 120),
             child: _SectionCard(
-              title: 'NOTIFICATIONS',
+              title: context.l10n('NOTIFICATIONS', 'BİLDİRİMLER'),
               child: Column(
                 children: [
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     activeThumbColor: scheme.tertiary,
-                    title: const Text('Daily summary'),
-                    subtitle: Text('Scheduling arrives with the notification layer',
-                        style: TextStyle(color: scheme.onSurfaceVariant)),
+                    title: Text(context.l10n('Daily summary', 'Günlük özet')),
+                    subtitle: Text(
+                      context.l10n(
+                        'Scheduled daily at 07:00 for the active location.',
+                        'Etkin konum için her gün 07:00’ye programlanır.',
+                      ),
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
                     value: notif.dailySummary,
-                    onChanged: (v) => ref
-                        .read(notificationSettingsProvider.notifier)
-                        .setDailySummary(v),
+                    onChanged: (value) => setNotification(
+                      value,
+                      () => ref
+                          .read(notificationSettingsProvider.notifier)
+                          .setDailySummary(value),
+                    ),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     activeThumbColor: scheme.tertiary,
-                    title: const Text('High-score day alert'),
+                    title: Text(
+                      context.l10n(
+                        'High-score day alert',
+                        'Yüksek skorlu gün uyarısı',
+                      ),
+                    ),
+                    subtitle: Text(
+                      context.l10n(
+                        'Alerts at 18:00 before a 4–5 star day.',
+                        '4–5 yıldızlı günden önce 18:00’de uyarır.',
+                      ),
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
                     value: notif.highScoreAlert,
-                    onChanged: (v) => ref
-                        .read(notificationSettingsProvider.notifier)
-                        .setHighScoreAlert(v),
+                    onChanged: (value) => setNotification(
+                      value,
+                      () => ref
+                          .read(notificationSettingsProvider.notifier)
+                          .setHighScoreAlert(value),
+                    ),
                   ),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Period reminders'),
-                    subtitle: Text('Pro',
-                        style: TextStyle(color: moss, fontWeight: FontWeight.w700)),
-                    trailing: Icon(isPro ? Icons.check_circle : Icons.lock_outline,
-                        color: isPro ? moss : scheme.outline),
+                    title: Text(
+                      context.l10n('Period reminders', 'Dönem hatırlatıcıları'),
+                    ),
+                    subtitle: Text(
+                      isPro
+                          ? context.l10n(
+                              'Choose a period from day details.',
+                              'Gün detayından bir dönem seçin.',
+                            )
+                          : 'Pro',
+                      style: TextStyle(
+                        color: isPro ? scheme.onSurfaceVariant : moss,
+                        fontWeight: isPro ? null : FontWeight.w700,
+                      ),
+                    ),
+                    trailing: Icon(
+                      isPro ? Icons.check_circle : Icons.lock_outline,
+                      color: isPro ? moss : scheme.outline,
+                    ),
                   ),
                 ],
               ),
@@ -149,21 +239,25 @@ class SettingsScreen extends ConsumerWidget {
           Reveal(
             delay: const Duration(milliseconds: 160),
             child: _SectionCard(
-              title: 'APPEARANCE & LANGUAGE',
+              title: context.l10n('APPEARANCE & LANGUAGE', 'GÖRÜNÜM VE DİL'),
               child: Column(
                 children: [
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Theme'),
-                    trailing: Text('Dark (MVP)',
-                        style: TextStyle(color: scheme.onSurfaceVariant)),
+                    leading: const Icon(Icons.palette_outlined),
+                    title: Text(context.l10n('Theme', 'Tema')),
+                    subtitle: Text(_themeLabel(context, themeMode)),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showThemePicker(context, ref, themeMode),
                   ),
                   const Divider(height: 24),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Language'),
-                    trailing: Text('English',
-                        style: TextStyle(color: scheme.onSurfaceVariant)),
+                    leading: const Icon(Icons.language),
+                    title: Text(context.l10n('Language', 'Dil')),
+                    subtitle: Text(language.nativeName),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showLanguagePicker(context, ref, language),
                   ),
                 ],
               ),
@@ -176,7 +270,12 @@ class SettingsScreen extends ConsumerWidget {
               child: ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(Icons.analytics_outlined, color: scheme.tertiary),
-                title: const Text('How is the score calculated?'),
+                title: Text(
+                  context.l10n(
+                    'How is the score calculated?',
+                    'Puan nasıl hesaplanıyor?',
+                  ),
+                ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _showScoreExplainer(context),
               ),
@@ -189,24 +288,50 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   ListTile(
+                    enabled: false,
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Restore purchases'),
-                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('No purchases to restore yet.'))),
+                    title: Text(
+                      context.l10n(
+                        'Restore purchases',
+                        'Satın alımları geri yükle',
+                      ),
+                    ),
+                    subtitle: Text(
+                      context.l10n(
+                        'Available when subscriptions launch.',
+                        'Abonelikler yayımlandığında kullanılabilir.',
+                      ),
+                    ),
                   ),
                   const Divider(height: 24),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Privacy policy'),
-                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Privacy page coming before launch.'))),
+                    leading: const Icon(Icons.privacy_tip_outlined),
+                    title: Text(
+                      context.l10n('Privacy policy', 'Gizlilik politikası'),
+                    ),
+                    subtitle: Text(
+                      context.l10n(
+                        'Opens the current policy on GitHub.',
+                        'GitHub’daki güncel politikayı açar.',
+                      ),
+                    ),
+                    trailing: const Icon(Icons.open_in_new, size: 19),
+                    onTap: () => _openPrivacyPolicy(context),
                   ),
                   const Divider(height: 24),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('About SoluCast'),
-                    subtitle: Text('Weather data by Open-Meteo.com',
-                        style: TextStyle(color: scheme.onSurfaceVariant)),
+                    title: Text(
+                      context.l10n('About AnglerPulse', 'AnglerPulse hakkında'),
+                    ),
+                    subtitle: Text(
+                      context.l10n(
+                        'Version 1.0.0 · Weather by Open-Meteo',
+                        'Sürüm 1.0.0 · Hava verisi: Open-Meteo',
+                      ),
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
                   ),
                 ],
               ),
@@ -218,75 +343,229 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-void _showScoreExplainer(BuildContext context) {
-  const w = ScoreWeights.defaults;
-  final rows = [
-    ('Moon phase', w.moonPhase, 'Peaks at new and full moon.'),
-    ('Dawn / dusk overlap', w.twilightOverlap,
-        'Bonus when a major period lines up with twilight.'),
-    ('Pressure trend', w.pressureTrend,
-        'Falling pressure ahead of a front boosts activity.'),
-    ('Season', w.seasonal, 'Longer daylight raises the baseline.'),
-  ];
+String _themeLabel(BuildContext context, AppThemeMode mode) => switch (mode) {
+  AppThemeMode.system => context.l10n('System', 'Sistem'),
+  AppThemeMode.dark => context.l10n('Dark', 'Koyu'),
+  AppThemeMode.light => context.l10n('Light', 'Açık'),
+};
 
-  showModalBottomSheet(
+Future<void> _showThemePicker(
+  BuildContext context,
+  WidgetRef ref,
+  AppThemeMode selected,
+) async {
+  await showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
-    builder: (sheetContext) => Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('How is the score calculated?',
-              style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 12),
-          Text(
-            'Every day gets a 0–100 score from four weighted factors, '
-            'computed entirely on-device from astronomy — no internet required.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 16),
-          for (final r in rows)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(r.$1, style: Theme.of(context).textTheme.titleSmall),
-                      Text('${(r.$2 * 100).round()}%',
-                          style: SoluTheme.dataMono(context, size: 13)),
-                    ],
-                  ),
-                  Text(r.$3,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                ],
-              ),
+    builder: (sheetContext) => SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.72,
+        ),
+        child: ListView(
+          shrinkWrap: true,
+          padding: EdgeInsets.zero,
+          children: [
+            ListTile(
+              title: Text(context.l10n('Theme', 'Tema')),
+              titleTextStyle: Theme.of(context).textTheme.titleLarge,
             ),
-          Text(
-            'When weather data is unavailable, the pressure weight is '
-            'redistributed across the other three factors.',
-            style: Theme.of(context)
-                .textTheme
-                .labelSmall
-                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-          ),
-        ],
+            for (final mode in AppThemeMode.values)
+              ListTile(
+                leading: Icon(
+                  mode == selected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                ),
+                title: Text(_themeLabel(context, mode)),
+                onTap: () {
+                  ref.read(themePreferenceProvider.notifier).set(mode);
+                  Navigator.pop(sheetContext);
+                },
+              ),
+          ],
+        ),
       ),
     ),
   );
 }
 
-/// Sol başlık+alt metin, sağda kontrol. `ListTile.trailing`'in dar kısıtları
-/// SegmentedButton etiketlerini sarmalıyordu; bu düzen kontrole doğal
-/// genişliğini verir, uzun alt metin sola sıkışmadan sarar.
+Future<void> _showLanguagePicker(
+  BuildContext context,
+  WidgetRef ref,
+  AppLanguage selected,
+) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (sheetContext) => SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.72,
+        ),
+        child: ListView(
+          shrinkWrap: true,
+          padding: EdgeInsets.zero,
+          children: [
+            ListTile(
+              title: Text(context.l10n('Language', 'Dil')),
+              titleTextStyle: Theme.of(context).textTheme.titleLarge,
+            ),
+            for (final language in AppLanguage.values)
+              ListTile(
+                leading: Icon(
+                  selected == language
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                ),
+                title: Text(language.nativeName),
+                onTap: () {
+                  ref.read(languagePreferenceProvider.notifier).set(language);
+                  Navigator.pop(sheetContext);
+                },
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Future<void> _openPrivacyPolicy(BuildContext context) async {
+  var opened = false;
+  try {
+    opened = await launchUrl(
+      Uri.parse(_privacyPolicyUrl),
+      mode: LaunchMode.externalApplication,
+    );
+  } catch (_) {
+    opened = false;
+  }
+  if (!opened && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          context.l10n(
+            'The privacy policy could not be opened.',
+            'Gizlilik politikası açılamadı.',
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _showScoreExplainer(BuildContext context) {
+  const weights = ScoreWeights.defaults;
+  final rows = [
+    (
+      context.l10n('Moon phase', 'Ay evresi'),
+      weights.moonPhase,
+      context.l10n(
+        'Peaks at new and full moon.',
+        'Yeni ay ve dolunayda yükselir.',
+      ),
+    ),
+    (
+      context.l10n('Dawn / dusk overlap', 'Şafak / alacakaranlık çakışması'),
+      weights.twilightOverlap,
+      context.l10n(
+        'Bonus when a major period overlaps twilight.',
+        'Ana dönem alacakaranlıkla çakıştığında ek puan verir.',
+      ),
+    ),
+    (
+      context.l10n('Pressure trend', 'Basınç eğilimi'),
+      weights.pressureTrend,
+      context.l10n(
+        'Falling pressure ahead of a front boosts activity.',
+        'Cephe öncesi düşen basınç etkinliği artırır.',
+      ),
+    ),
+    (
+      context.l10n('Season', 'Mevsim'),
+      weights.seasonal,
+      context.l10n(
+        'Longer daylight raises the baseline.',
+        'Uzun gün ışığı taban puanı yükseltir.',
+      ),
+    ),
+  ];
+
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (sheetContext) => SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n(
+                'How is the score calculated?',
+                'Puan nasıl hesaplanıyor?',
+              ),
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              context.l10n(
+                'Each day receives a 0–100 score from four weighted factors. Astronomy is calculated on the device.',
+                'Her gün dört ağırlıklı etkenden 0–100 puan alır. Astronomi cihazda hesaplanır.',
+              ),
+            ),
+            const SizedBox(height: 16),
+            for (final row in rows)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            row.$1,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                        ),
+                        Text(
+                          '${(row.$2 * 100).round()}%',
+                          style: SoluTheme.dataMono(context, size: 13),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      row.$3,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Text(
+              context.l10n(
+                'If weather is unavailable, its weight is redistributed across the astronomy factors.',
+                'Hava verisi yoksa ağırlığı astronomi etkenlerine dağıtılır.',
+              ),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _PrefRow extends StatelessWidget {
-  const _PrefRow(
-      {required this.title, required this.control, this.subtitle});
+  const _PrefRow({required this.title, required this.control, this.subtitle});
   final String title;
   final String? subtitle;
   final Widget control;
@@ -303,11 +582,12 @@ class _PrefRow extends StatelessWidget {
               Text(title, style: Theme.of(context).textTheme.bodyLarge),
               if (subtitle != null) ...[
                 const SizedBox(height: 2),
-                Text(subtitle!,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: scheme.onSurfaceVariant)),
+                Text(
+                  subtitle!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ],
             ],
           ),
@@ -325,21 +605,19 @@ class _SectionCard extends StatelessWidget {
   final String? title;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (title != null) ...[
-              Text(title!, style: SoluTheme.labelCaps(context)),
-              const SizedBox(height: 8),
-            ],
-            child,
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title != null) ...[
+            Text(title!, style: SoluTheme.labelCaps(context)),
+            const SizedBox(height: 8),
           ],
-        ),
+          child,
+        ],
       ),
-    );
-  }
+    ),
+  );
 }

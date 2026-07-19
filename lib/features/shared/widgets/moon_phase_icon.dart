@@ -70,7 +70,12 @@ class _MoonPainter extends CustomPainter {
         )
         ..quadraticBezierTo(c.dx + ctrlX, c.dy, c.dx, c.dy - r)
         ..close();
-      canvas.drawPath(path, Paint()..color = lit..isAntiAlias = true);
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = lit
+          ..isAntiAlias = true,
+      );
     }
 
     canvas.drawCircle(

@@ -38,7 +38,9 @@ class LocationService {
     }
 
     final pos = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.medium,
+      ),
     );
     final tz = await FlutterTimezone.getLocalTimezone();
     final name = await _displayNameFor(pos);
@@ -66,11 +68,10 @@ class LocationService {
           place.administrativeArea,
         ]);
         final country = place.country?.trim();
-        final parts = [locality, country]
-            .whereType<String>()
-            .where((part) => part.isNotEmpty)
-            .toSet()
-            .toList();
+        final parts = [
+          locality,
+          country,
+        ].whereType<String>().where((part) => part.isNotEmpty).toSet().toList();
         if (parts.isNotEmpty) return parts.join(', ');
       }
     } catch (_) {

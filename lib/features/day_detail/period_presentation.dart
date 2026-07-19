@@ -9,10 +9,17 @@ class PeriodPresentation {
   final IconData icon;
   final int stars; // 1..5
 
-  const PeriodPresentation(
-      {required this.label, required this.icon, required this.stars});
+  const PeriodPresentation({
+    required this.label,
+    required this.icon,
+    required this.stars,
+  });
 
-  factory PeriodPresentation.of(SolunarPeriod p, Duration utcOffset) {
+  factory PeriodPresentation.of(
+    SolunarPeriod p,
+    Duration utcOffset, {
+    bool turkish = false,
+  }) {
     final localHour = p.peak.add(utcOffset).hour;
     final isDawnHalf = localHour < 12;
 
@@ -20,28 +27,32 @@ class PeriodPresentation {
       case SolunarPeriodKind.upperTransit:
         return PeriodPresentation(
           label: p.overlapsTwilight
-              ? (isDawnHalf ? 'Dawn Transit' : 'Dusk Transit')
-              : 'Overhead',
+              ? (isDawnHalf
+                    ? (turkish ? 'Şafak Geçişi' : 'Dawn Transit')
+                    : (turkish ? 'Alacakaranlık Geçişi' : 'Dusk Transit'))
+              : (turkish ? 'Tepe Noktası' : 'Overhead'),
           icon: Icons.arrow_upward,
           stars: p.overlapsTwilight ? 5 : 4,
         );
       case SolunarPeriodKind.lowerTransit:
         return PeriodPresentation(
           label: p.overlapsTwilight
-              ? (isDawnHalf ? 'Dawn Transit' : 'Dusk Transit')
-              : 'Underfoot',
+              ? (isDawnHalf
+                    ? (turkish ? 'Şafak Geçişi' : 'Dawn Transit')
+                    : (turkish ? 'Alacakaranlık Geçişi' : 'Dusk Transit'))
+              : (turkish ? 'Ayak Altı' : 'Underfoot'),
           icon: Icons.arrow_downward,
           stars: p.overlapsTwilight ? 5 : 4,
         );
       case SolunarPeriodKind.moonrise:
         return PeriodPresentation(
-          label: 'Moonrise',
+          label: turkish ? 'Ay Doğuşu' : 'Moonrise',
           icon: Icons.brightness_2_outlined,
           stars: p.overlapsTwilight ? 4 : 3,
         );
       case SolunarPeriodKind.moonset:
         return PeriodPresentation(
-          label: 'Moonset',
+          label: turkish ? 'Ay Batışı' : 'Moonset',
           icon: Icons.brightness_3_outlined,
           stars: p.overlapsTwilight ? 4 : 3,
         );

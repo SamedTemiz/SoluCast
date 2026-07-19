@@ -8,7 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Konum verisi cihazda kalır, sunucuya gönderilmez (F1.4 gizlilik).
 final sharedPreferencesProvider = Provider<SharedPreferences>(
   (ref) => throw UnimplementedError(
-      'sharedPreferencesProvider main() içinde override edilmeli'),
+    'sharedPreferencesProvider main() içinde override edilmeli',
+  ),
 );
 
 /// Kalıcılık anahtarları — tek yerde toplanır.
@@ -22,4 +23,6 @@ class PrefKeys {
   static const notifDailySummary = 'notif_daily_summary';
   static const notifHighScore = 'notif_high_score';
   static const onboardingDone = 'onboarding_done';
+  static const themeMode = 'theme_mode';
+  static const language = 'language';
 }

@@ -29,26 +29,43 @@ class WeatherData {
       WeatherInput(pressureHpa: pressureHpa, trend: pressureTrend);
 
   Map<String, dynamic> toJson() => {
-        't': temperatureC,
-        'ws': windSpeedKmh,
-        'wd': windDirectionDeg,
-        'cc': cloudCoverPct,
-        'pp': precipitationProbabilityPct,
-        'p': pressureHpa,
-        'pt': pressureTrend.name,
-        'at': fetchedAt.toIso8601String(),
-      };
+    't': temperatureC,
+    'ws': windSpeedKmh,
+    'wd': windDirectionDeg,
+    'cc': cloudCoverPct,
+    'pp': precipitationProbabilityPct,
+    'p': pressureHpa,
+    'pt': pressureTrend.name,
+    'at': fetchedAt.toIso8601String(),
+  };
 
   factory WeatherData.fromJson(Map<String, dynamic> j) => WeatherData(
-        temperatureC: (j['t'] as num).toDouble(),
-        windSpeedKmh: (j['ws'] as num).toDouble(),
-        windDirectionDeg: (j['wd'] as num).toInt(),
-        cloudCoverPct: (j['cc'] as num).toInt(),
-        precipitationProbabilityPct: (j['pp'] as num).toInt(),
-        pressureHpa: (j['p'] as num).toDouble(),
-        pressureTrend: PressureTrend.values.byName(j['pt'] as String),
-        fetchedAt: DateTime.parse(j['at'] as String),
-      );
+    temperatureC: (j['t'] as num).toDouble(),
+    windSpeedKmh: (j['ws'] as num).toDouble(),
+    windDirectionDeg: (j['wd'] as num).toInt(),
+    cloudCoverPct: (j['cc'] as num).toInt(),
+    precipitationProbabilityPct: (j['pp'] as num).toInt(),
+    pressureHpa: (j['p'] as num).toDouble(),
+    pressureTrend: PressureTrend.values.byName(j['pt'] as String),
+    fetchedAt: DateTime.parse(j['at'] as String),
+  );
+}
+
+/// One local-wall-clock hourly forecast point returned for a selected day.
+class HourlyWeatherData {
+  final DateTime localTime;
+  final double temperatureC;
+  final double windSpeedKmh;
+  final int precipitationProbabilityPct;
+  final int weatherCode;
+
+  const HourlyWeatherData({
+    required this.localTime,
+    required this.temperatureC,
+    required this.windSpeedKmh,
+    required this.precipitationProbabilityPct,
+    required this.weatherCode,
+  });
 }
 
 /// Son ~3 saatlik basınç serisinden trend sınıfı üretir (saf, testable).

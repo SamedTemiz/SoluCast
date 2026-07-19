@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/localization.dart';
 import '../../data/prefs/preferences.dart';
 
 /// 24 saat formatı mı? Kalıcı (shared_preferences). Todayfmt bunu gerçekten
@@ -29,20 +30,69 @@ class Units extends Notifier<UnitSystem> {
 
   void set(UnitSystem value) {
     state = value;
-    ref
-        .read(sharedPreferencesProvider)
-        .setString(PrefKeys.units, value.name);
+    ref.read(sharedPreferencesProvider).setString(PrefKeys.units, value.name);
   }
 }
 
 final unitsProvider = NotifierProvider<Units, UnitSystem>(Units.new);
 
+enum AppThemeMode { system, dark, light }
+
+class ThemePreference extends Notifier<AppThemeMode> {
+  @override
+  AppThemeMode build() {
+    final saved = ref
+        .watch(sharedPreferencesProvider)
+        .getString(PrefKeys.themeMode);
+    return AppThemeMode.values.firstWhere(
+      (value) => value.name == saved,
+      orElse: () => AppThemeMode.dark,
+    );
+  }
+
+  void set(AppThemeMode value) {
+    state = value;
+    ref
+        .read(sharedPreferencesProvider)
+        .setString(PrefKeys.themeMode, value.name);
+  }
+}
+
+final themePreferenceProvider = NotifierProvider<ThemePreference, AppThemeMode>(
+  ThemePreference.new,
+);
+
+class LanguagePreference extends Notifier<AppLanguage> {
+  @override
+  AppLanguage build() {
+    final saved = ref
+        .watch(sharedPreferencesProvider)
+        .getString(PrefKeys.language);
+    return AppLanguage.values.firstWhere(
+      (value) => value.name == saved,
+      orElse: () => AppLanguage.english,
+    );
+  }
+
+  void set(AppLanguage value) {
+    state = value;
+    ref
+        .read(sharedPreferencesProvider)
+        .setString(PrefKeys.language, value.name);
+  }
+}
+
+final languagePreferenceProvider =
+    NotifierProvider<LanguagePreference, AppLanguage>(LanguagePreference.new);
+
 /// Bildirim tercihleri — F5. Zamanlama Hafta 3 kapsamı; durum kalıcı.
 class NotificationPrefs {
   final bool dailySummary;
   final bool highScoreAlert;
-  const NotificationPrefs(
-      {this.dailySummary = true, this.highScoreAlert = true});
+  const NotificationPrefs({
+    this.dailySummary = false,
+    this.highScoreAlert = false,
+  });
 
   NotificationPrefs copyWith({bool? dailySummary, bool? highScoreAlert}) =>
       NotificationPrefs(
@@ -56,8 +106,8 @@ class NotificationSettings extends Notifier<NotificationPrefs> {
   NotificationPrefs build() {
     final prefs = ref.watch(sharedPreferencesProvider);
     return NotificationPrefs(
-      dailySummary: prefs.getBool(PrefKeys.notifDailySummary) ?? true,
-      highScoreAlert: prefs.getBool(PrefKeys.notifHighScore) ?? true,
+      dailySummary: prefs.getBool(PrefKeys.notifDailySummary) ?? false,
+      highScoreAlert: prefs.getBool(PrefKeys.notifHighScore) ?? false,
     );
   }
 
@@ -74,4 +124,5 @@ class NotificationSettings extends Notifier<NotificationPrefs> {
 
 final notificationSettingsProvider =
     NotifierProvider<NotificationSettings, NotificationPrefs>(
-        NotificationSettings.new);
+      NotificationSettings.new,
+    );

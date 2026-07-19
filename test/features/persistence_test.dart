@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:solucast/data/location/saved_location.dart';
-import 'package:solucast/data/prefs/preferences.dart';
-import 'package:solucast/features/settings/settings_providers.dart';
-import 'package:solucast/features/shared/entitlement.dart';
-import 'package:solucast/features/today/today_providers.dart';
+import 'package:angler_pulse/data/location/saved_location.dart';
+import 'package:angler_pulse/data/prefs/preferences.dart';
+import 'package:angler_pulse/features/settings/settings_providers.dart';
+import 'package:angler_pulse/features/shared/entitlement.dart';
+import 'package:angler_pulse/features/today/today_providers.dart';
 
 /// Kalıcılık (#24): konumlar, ayarlar ve Pro durumu uygulama yeniden
 /// başladığında korunmalı. "Restart" = aynı prefs örneğiyle yeni bir
@@ -24,10 +24,11 @@ void main() {
 
     final c1 = await makeContainer(sp);
     const sydney = SavedLocation(
-        name: 'Sydney',
-        latitude: -33.87,
-        longitude: 151.2,
-        timeZoneId: 'Australia/Sydney');
+      name: 'Sydney',
+      latitude: -33.87,
+      longitude: 151.2,
+      timeZoneId: 'Australia/Sydney',
+    );
     c1.read(locationsProvider.notifier).add(sydney);
     c1.read(locationsProvider.notifier).selectActive('Sydney');
     expect(c1.read(locationsProvider).activeName, 'Sydney');
@@ -36,7 +37,10 @@ void main() {
     // Restart: aynı prefs, yeni container.
     final c2 = await makeContainer(sp);
     final state = c2.read(locationsProvider);
-    expect(state.locations.map((l) => l.name), containsAll(['İstanbul', 'Sydney']));
+    expect(
+      state.locations.map((l) => l.name),
+      containsAll(['İstanbul', 'Sydney']),
+    );
     expect(state.activeName, 'Sydney');
     expect(state.active.timeZoneId, 'Australia/Sydney');
     c2.dispose();
@@ -58,8 +62,9 @@ void main() {
   });
 
   test('bozuk konum JSON\'u demo konuma güvenli düşer (çökme yok)', () async {
-    SharedPreferences.setMockInitialValues(
-        {PrefKeys.locations: 'this-is-not-json'});
+    SharedPreferences.setMockInitialValues({
+      PrefKeys.locations: 'this-is-not-json',
+    });
     final sp = await SharedPreferences.getInstance();
 
     final c = await makeContainer(sp);

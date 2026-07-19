@@ -13,7 +13,7 @@ abstract interface class GeocodingRepository {
 
 class OpenMeteoGeocodingRepository implements GeocodingRepository {
   OpenMeteoGeocodingRepository({http.Client? client})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   final http.Client _client;
   static const _host = 'geocoding-api.open-meteo.com';
@@ -47,20 +47,22 @@ class OpenMeteoGeocodingRepository implements GeocodingRepository {
           .whereType<Map<String, dynamic>>()
           .where((r) => r['timezone'] != null) // tz olmadan hesap yapılamaz
           .map((r) {
-        final name = r['name'] as String;
-        final admin1 = r['admin1'] as String?;
-        final country = r['country'] as String?;
-        // Aynı isimli yerleri ayırt et: "Trabzon, Turkey".
-        final label = [name, admin1 ?? country]
-            .where((s) => s != null && s.isNotEmpty)
-            .join(', ');
-        return SavedLocation(
-          name: label,
-          latitude: (r['latitude'] as num).toDouble(),
-          longitude: (r['longitude'] as num).toDouble(),
-          timeZoneId: r['timezone'] as String,
-        );
-      }).toList();
+            final name = r['name'] as String;
+            final admin1 = r['admin1'] as String?;
+            final country = r['country'] as String?;
+            // Aynı isimli yerleri ayırt et: "Trabzon, Turkey".
+            final label = [
+              name,
+              admin1 ?? country,
+            ].where((s) => s != null && s.isNotEmpty).join(', ');
+            return SavedLocation(
+              name: label,
+              latitude: (r['latitude'] as num).toDouble(),
+              longitude: (r['longitude'] as num).toDouble(),
+              timeZoneId: r['timezone'] as String,
+            );
+          })
+          .toList();
     } catch (_) {
       return const [];
     }

@@ -1,14 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:solucast/app/app.dart';
-import 'package:solucast/data/location/saved_location.dart';
-import 'package:solucast/data/notifications/notification_service.dart';
-import 'package:solucast/data/prefs/preferences.dart';
-import 'package:solucast/data/weather/weather_data.dart';
-import 'package:solucast/data/weather/weather_repository.dart';
-import 'package:solucast/features/notifications/notification_providers.dart';
-import 'package:solucast/features/weather/weather_providers.dart';
+import 'package:angler_pulse/app/app.dart';
+import 'package:angler_pulse/data/location/saved_location.dart';
+import 'package:angler_pulse/data/notifications/notification_service.dart';
+import 'package:angler_pulse/data/prefs/preferences.dart';
+import 'package:angler_pulse/data/weather/weather_data.dart';
+import 'package:angler_pulse/data/weather/weather_repository.dart';
+import 'package:angler_pulse/features/notifications/notification_providers.dart';
+import 'package:angler_pulse/features/weather/weather_providers.dart';
 
 class _FakeWeatherRepository implements WeatherRepository {
   @override
@@ -18,19 +18,22 @@ class _FakeWeatherRepository implements WeatherRepository {
 /// Onboarding (screens.md §1): ilk açılışta 3 adım + soft paywall; Skip her
 /// zaman görünür; tamamlanınca kalıcı olarak Home'a geçilir.
 void main() {
-  Future<SharedPreferences> pumpFullApp(WidgetTester tester,
-      {Map<String, Object> prefs = const {}}) async {
+  Future<SharedPreferences> pumpFullApp(
+    WidgetTester tester, {
+    Map<String, Object> prefs = const {},
+  }) async {
     SharedPreferences.setMockInitialValues(prefs);
     final sp = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sp),
-          notificationServiceProvider
-              .overrideWithValue(const NoopNotificationScheduler()),
+          notificationServiceProvider.overrideWithValue(
+            const NoopNotificationScheduler(),
+          ),
           weatherRepositoryProvider.overrideWithValue(_FakeWeatherRepository()),
         ],
-        child: const SoluCastApp(),
+        child: const AnglerPulseApp(),
       ),
     );
     await tester.pumpAndSettle();
@@ -67,15 +70,17 @@ void main() {
     expect(sp.getBool(PrefKeys.onboardingDone), isTrue);
   });
 
-  testWidgets('Onboarding tamamlanmışsa app doğrudan Home ile açılır',
-      (tester) async {
+  testWidgets('Onboarding tamamlanmışsa app doğrudan Home ile açılır', (
+    tester,
+  ) async {
     await pumpFullApp(tester, prefs: {PrefKeys.onboardingDone: true});
     expect(find.text('FISHING CONDITION'), findsOneWidget);
     expect(find.text('Know the best time to fish'), findsNothing);
   });
 
-  testWidgets('Onboarding paywall\'unda trial başlatılırsa Pro açık gelir',
-      (tester) async {
+  testWidgets('Onboarding paywall\'unda trial başlatılırsa Pro açık gelir', (
+    tester,
+  ) async {
     final sp = await pumpFullApp(tester);
 
     await tester.tap(find.text('Get started'));

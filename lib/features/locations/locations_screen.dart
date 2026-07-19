@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/localization.dart';
 import '../../app/theme.dart';
 import '../../data/location/saved_location.dart';
+import '../../data/weather/weather_data.dart';
 import '../day_detail/day_detail_screen.dart';
+import '../settings/settings_providers.dart';
 import '../shared/entitlement.dart';
 import '../shared/location_switcher_sheet.dart';
 import '../shared/upgrade_sheet.dart';
 import '../shared/widgets/fish_rating.dart';
 import '../shared/widgets/reveal.dart';
 import '../today/today_providers.dart';
+import '../weather/weather_providers.dart';
 
 /// Konumlar sekmesi (Stitch "My Locations"): kayıtlı konum listesi, aktif
 /// seçim, swipe-sil, preset ekleme. Free tier: 1 konum sınırı.
@@ -24,36 +28,38 @@ class LocationsScreen extends ConsumerWidget {
     final moss = SoluPalette.of(context).neonMoss;
 
     return SafeArea(
+      top: false,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           Reveal(
             child: Row(
               children: [
-                Icon(Icons.location_on, size: 18, color: scheme.tertiary),
-                const SizedBox(width: 6),
-                Text(state.active.name,
-                    style: Theme.of(context).textTheme.titleMedium),
-                Icon(Icons.expand_more, size: 20, color: scheme.onSurfaceVariant),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Reveal(
-            delay: const Duration(milliseconds: 60),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('My Locations',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineMedium
-                        ?.copyWith(fontSize: 24)),
+                Expanded(
+                  child: Text(
+                    context.l10n('My Locations', 'Konumlarım'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.headlineMedium?.copyWith(fontSize: 24),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 IconButton.filled(
                   onPressed: () {
                     if (isLocationAddLocked(
-                        currentCount: state.locations.length, isPro: isPro)) {
-                      showUpgradeTeaser(context, ref, feature: 'Multiple locations');
+                      currentCount: state.locations.length,
+                      isPro: isPro,
+                    )) {
+                      showUpgradeTeaser(
+                        context,
+                        ref,
+                        feature: context.l10n(
+                          'Multiple locations',
+                          'Birden fazla konum',
+                        ),
+                      );
                       return;
                     }
                     showAddLocationSheet(context, ref);
@@ -84,8 +90,14 @@ class LocationsScreen extends ConsumerWidget {
             Reveal(
               delay: const Duration(milliseconds: 260),
               child: _UpgradeCard(
-                onTap: () =>
-                    showUpgradeTeaser(context, ref, feature: 'Unlimited locations'),
+                onTap: () => showUpgradeTeaser(
+                  context,
+                  ref,
+                  feature: context.l10n(
+                    'Unlimited locations',
+                    'Sınırsız konum',
+                  ),
+                ),
               ),
             ),
           ],
@@ -106,20 +118,34 @@ class _LocationCard extends ConsumerWidget {
     final moss = SoluPalette.of(context).neonMoss;
     final today = localToday(location);
     final isPro = ref.watch(isProPreviewProvider);
+    final units = ref.watch(unitsProvider);
     final isLocked = !isPro && !isActive;
-    final result =
-        ref.watch(solunarForDateProvider((location: location, localDate: today)));
+    final weather = ref.watch(weatherProvider(location));
+    final result = ref.watch(
+      solunarForDateProvider((location: location, localDate: today)),
+    );
 
     final card = InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: () {
         if (isLocked) {
-          showUpgradeTeaser(context, ref, feature: 'Multiple locations');
+          showUpgradeTeaser(
+            context,
+            ref,
+            feature: context.l10n('Multiple locations', 'Birden fazla konum'),
+          );
           return;
         }
         ref.read(locationsProvider.notifier).selectActive(location.name);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Switched to ${location.name}')),
+          SnackBar(
+            content: Text(
+              context.l10n(
+                'Switched to ${location.name}',
+                '${location.name} konumuna geçildi',
+              ),
+            ),
+          ),
         );
       },
       child: Container(
@@ -137,72 +163,89 @@ class _LocationCard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
-                      Text(location.name,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700)),
+                      Text(
+                        location.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
                       if (isActive) ...[
-                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: moss.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text('ACTIVE',
-                              style: SoluTheme.dataMono(context,
-                                  size: 9, color: moss, weight: FontWeight.w700)),
+                          child: Text(
+                            context.l10n('ACTIVE', 'ETKİN'),
+                            style: SoluTheme.dataMono(
+                              context,
+                              size: 9,
+                              color: moss,
+                              weight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ],
                       if (isLocked) ...[
-                        const SizedBox(width: 8),
-                        Icon(Icons.lock_outline,
-                            size: 16, color: scheme.outline),
+                        Icon(
+                          Icons.lock_outline,
+                          size: 16,
+                          color: scheme.outline,
+                        ),
                       ],
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.cloud_outlined,
-                          size: 14, color: scheme.onSurfaceVariant),
-                      const SizedBox(width: 4),
-                      Text('Weather pending',
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(color: scheme.onSurfaceVariant)),
-                    ],
-                  ),
+                  _WeatherLine(weather: weather, units: units),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       FishRating(
-                          rating: result.solunar.fishRating,
-                          size: 16,
-                          animate: false),
+                        rating: result.solunar.fishRating,
+                        size: 16,
+                        animate: false,
+                      ),
                       const Spacer(),
                       InkWell(
                         onTap: () {
                           if (isLocked) {
-                            showUpgradeTeaser(context, ref,
-                                feature: 'Multiple locations');
+                            showUpgradeTeaser(
+                              context,
+                              ref,
+                              feature: context.l10n(
+                                'Multiple locations',
+                                'Birden fazla konum',
+                              ),
+                            );
                             return;
                           }
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => DayDetailScreen(
-                                  location: location, localDate: today),
+                                location: location,
+                                localDate: today,
+                              ),
                             ),
                           );
                         },
-                        child: Text(isLocked ? 'PRO' : 'DETAILS',
-                            style: SoluTheme.labelCaps(context)
-                                .copyWith(color: scheme.tertiary)),
+                        child: Text(
+                          isLocked
+                              ? 'PRO'
+                              : context.l10n('DETAILS', 'DETAYLAR'),
+                          style: SoluTheme.labelCaps(
+                            context,
+                          ).copyWith(color: scheme.tertiary),
+                        ),
                       ),
                     ],
                   ),
@@ -235,6 +278,66 @@ class _LocationCard extends ConsumerWidget {
   }
 }
 
+class _WeatherLine extends StatelessWidget {
+  const _WeatherLine({required this.weather, required this.units});
+
+  final AsyncValue<WeatherData?> weather;
+  final UnitSystem units;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final data = weather.asData?.value;
+    final isLoading = weather.isLoading;
+    String label;
+    if (isLoading) {
+      label = context.l10n('Updating weather…', 'Hava güncelleniyor…');
+    } else if (data == null) {
+      label = context.l10n('Weather unavailable', 'Hava verisi alınamadı');
+    } else if (units == UnitSystem.metric) {
+      label =
+          '${data.temperatureC.round()} °C  ·  ${data.windSpeedKmh.round()} km/h  ·  ${data.pressureHpa.round()} hPa';
+    } else {
+      final fahrenheit = data.temperatureC * 9 / 5 + 32;
+      final mph = data.windSpeedKmh * 0.621371;
+      final inHg = data.pressureHpa * 0.02953;
+      label =
+          '${fahrenheit.round()} °F  ·  ${mph.round()} mph  ·  ${inHg.toStringAsFixed(2)} inHg';
+    }
+
+    return Row(
+      children: [
+        if (isLoading)
+          SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(
+              strokeWidth: 1.7,
+              color: scheme.onSurfaceVariant,
+            ),
+          )
+        else
+          Icon(
+            data == null ? Icons.cloud_off_outlined : Icons.cloud_outlined,
+            size: 14,
+            color: scheme.onSurfaceVariant,
+          ),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _UpgradeCard extends StatelessWidget {
   const _UpgradeCard({required this.onTap});
   final VoidCallback onTap;
@@ -254,19 +357,25 @@ class _UpgradeCard extends StatelessWidget {
         children: [
           Icon(Icons.lock_outline, color: scheme.onSurfaceVariant, size: 28),
           const SizedBox(height: 10),
-          Text('Unlock Unlimited Locations',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w700)),
+          Text(
+            context.l10n(
+              'Unlock Unlimited Locations',
+              'Sınırsız Konumun Kilidini Aç',
+            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 4),
           Text(
-            'Track conditions across all your favorite spots with Pro access.',
+            context.l10n(
+              'Track conditions across all your favorite spots with Pro access.',
+              'Pro ile tüm favori noktalarınızdaki koşulları takip edin.',
+            ),
             textAlign: TextAlign.center,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: scheme.onSurfaceVariant),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 14),
           OutlinedButton(
@@ -275,9 +384,10 @@ class _UpgradeCard extends StatelessWidget {
               foregroundColor: moss,
               side: BorderSide(color: moss),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6)),
+                borderRadius: BorderRadius.circular(6),
+              ),
             ),
-            child: const Text('UPGRADE TO PRO'),
+            child: Text(context.l10n('UPGRADE TO PRO', 'PRO’YA YÜKSELT')),
           ),
         ],
       ),

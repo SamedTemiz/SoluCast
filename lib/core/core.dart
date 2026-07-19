@@ -1,4 +1,4 @@
-/// SoluCast çekirdek motoru — saf Dart, %100 offline, Flutter/IO bağımsız.
+/// AnglerPulse çekirdek motoru — saf Dart, %100 offline, Flutter/IO bağımsız.
 ///
 /// Uygulamanın kalesi: astronomi efemerisi + solunar periyot/skor motoru.
 /// USNO referanslarına karşı ±2 dk doğrulanır ([test/core/astro_validation_test.dart]).

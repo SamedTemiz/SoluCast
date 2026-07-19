@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:solucast/core/astro/astronomia_ephemeris.dart';
-import 'package:solucast/core/astro/geo_position.dart';
+import 'package:angler_pulse/core/astro/astronomia_ephemeris.dart';
+import 'package:angler_pulse/core/astro/geo_position.dart';
 
 /// USNO ground-truth validasyonu (T1 önlemi — pazarlıksız).
 ///
@@ -21,7 +21,10 @@ void main() {
   group('USNO rise/set/transit validation (±2 min)', () {
     for (final snap in snapshots) {
       test(snap['name'] as String, () {
-        final parts = (snap['date'] as String).split('-').map(int.parse).toList();
+        final parts = (snap['date'] as String)
+            .split('-')
+            .map(int.parse)
+            .toList();
         final tzHours = (snap['tzHours'] as num).toDouble();
         final offset = Duration(minutes: (tzHours * 60).round());
 
@@ -39,11 +42,35 @@ void main() {
         // --- Güneş (tekil olaylar) ---
         final sun = snap['sun'] as Map<String, dynamic>?;
         if (sun != null) {
-          _checkSingle(sun, 'civilDawn', result.civilDawn, offset, toleranceMinutes);
-          _checkSingle(sun, 'sunrise', result.sunrise, offset, toleranceMinutes);
-          _checkSingle(sun, 'transit', result.solarNoon, offset, toleranceMinutes);
+          _checkSingle(
+            sun,
+            'civilDawn',
+            result.civilDawn,
+            offset,
+            toleranceMinutes,
+          );
+          _checkSingle(
+            sun,
+            'sunrise',
+            result.sunrise,
+            offset,
+            toleranceMinutes,
+          );
+          _checkSingle(
+            sun,
+            'transit',
+            result.solarNoon,
+            offset,
+            toleranceMinutes,
+          );
           _checkSingle(sun, 'sunset', result.sunset, offset, toleranceMinutes);
-          _checkSingle(sun, 'civilDusk', result.civilDusk, offset, toleranceMinutes);
+          _checkSingle(
+            sun,
+            'civilDusk',
+            result.civilDusk,
+            offset,
+            toleranceMinutes,
+          );
         }
 
         // --- Ay (çoklu olaylar) ---
@@ -51,15 +78,31 @@ void main() {
         if (moon != null) {
           _checkMulti(moon, 'rise', result.moonrises, offset, toleranceMinutes);
           _checkMulti(moon, 'set', result.moonsets, offset, toleranceMinutes);
-          _checkMulti(moon, 'upperTransit', result.moonUpperTransits, offset, toleranceMinutes);
-          _checkMulti(moon, 'lowerTransit', result.moonLowerTransits, offset, toleranceMinutes);
+          _checkMulti(
+            moon,
+            'upperTransit',
+            result.moonUpperTransits,
+            offset,
+            toleranceMinutes,
+          );
+          _checkMulti(
+            moon,
+            'lowerTransit',
+            result.moonLowerTransits,
+            offset,
+            toleranceMinutes,
+          );
 
           if (moon.containsKey('illumPct')) {
             final expected = (moon['illumPct'] as num).toDouble();
             final actual = result.moonIllumination * 100.0;
-            expect((actual - expected).abs(), lessThanOrEqualTo(3.0),
-                reason: 'aydınlanma: beklenen ~$expected%, gerçek '
-                    '${actual.toStringAsFixed(1)}%');
+            expect(
+              (actual - expected).abs(),
+              lessThanOrEqualTo(3.0),
+              reason:
+                  'aydınlanma: beklenen ~$expected%, gerçek '
+                  '${actual.toStringAsFixed(1)}%',
+            );
           }
         }
       });
@@ -80,17 +123,29 @@ void _checkSingle(
   final expected = group[key] as String?;
 
   if (expected == null) {
-    expect(actualUtc, isNull,
-        reason: '$key: bu gün gerçekleşmemeli (kutup), motor değer döndü: '
-            '${_local(actualUtc, offset)}');
+    expect(
+      actualUtc,
+      isNull,
+      reason:
+          '$key: bu gün gerçekleşmemeli (kutup), motor değer döndü: '
+          '${_local(actualUtc, offset)}',
+    );
     return;
   }
 
-  expect(actualUtc, isNotNull, reason: '$key: beklenen $expected, motor null döndü');
+  expect(
+    actualUtc,
+    isNotNull,
+    reason: '$key: beklenen $expected, motor null döndü',
+  );
   final diff = _diffMinutes(actualUtc!, offset, expected);
-  expect(diff, lessThanOrEqualTo(tol),
-      reason: '$key: beklenen $expected, gerçek ${_local(actualUtc, offset)} '
-          '(fark ${diff.toStringAsFixed(2)} dk)');
+  expect(
+    diff,
+    lessThanOrEqualTo(tol),
+    reason:
+        '$key: beklenen $expected, gerçek ${_local(actualUtc, offset)} '
+        '(fark ${diff.toStringAsFixed(2)} dk)',
+  );
 }
 
 /// Çoklu ay olaylarını doğrular: sayı eşleşmeli, her referans için toleransta
@@ -105,15 +160,23 @@ void _checkMulti(
   if (!group.containsKey(key)) return;
   final expected = (group[key] as List).cast<String>();
 
-  expect(actualUtc.length, expected.length,
-      reason: '$key: ${expected.length} olay beklendi, motor '
-          '${actualUtc.length} buldu (${actualUtc.map((d) => _local(d, offset)).toList()})');
+  expect(
+    actualUtc.length,
+    expected.length,
+    reason:
+        '$key: ${expected.length} olay beklendi, motor '
+        '${actualUtc.length} buldu (${actualUtc.map((d) => _local(d, offset)).toList()})',
+  );
 
   for (final exp in expected) {
     final match = actualUtc.any((a) => _diffMinutes(a, offset, exp) <= tol);
-    expect(match, isTrue,
-        reason: '$key: $exp için toleransta eşleşme yok — motor: '
-            '${actualUtc.map((d) => _local(d, offset)).toList()}');
+    expect(
+      match,
+      isTrue,
+      reason:
+          '$key: $exp için toleransta eşleşme yok — motor: '
+          '${actualUtc.map((d) => _local(d, offset)).toList()}',
+    );
   }
 }
 

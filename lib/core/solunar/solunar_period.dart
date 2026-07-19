@@ -35,11 +35,11 @@ class SolunarPeriod {
   bool contains(DateTime utc) => !utc.isBefore(start) && !utc.isAfter(end);
 
   SolunarPeriod copyWith({bool? overlapsTwilight}) => SolunarPeriod(
-        type: type,
-        kind: kind,
-        start: start,
-        peak: peak,
-        end: end,
-        overlapsTwilight: overlapsTwilight ?? this.overlapsTwilight,
-      );
+    type: type,
+    kind: kind,
+    start: start,
+    peak: peak,
+    end: end,
+    overlapsTwilight: overlapsTwilight ?? this.overlapsTwilight,
+  );
 }

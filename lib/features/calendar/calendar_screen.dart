@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/localization.dart';
 import '../../app/theme.dart';
 import '../../data/location/saved_location.dart';
 import '../day_detail/day_detail_screen.dart';
 import '../shared/entitlement.dart';
-import '../shared/location_switcher_sheet.dart';
 import '../shared/upgrade_sheet.dart';
 import '../shared/widgets/fish_rating.dart';
 import '../shared/widgets/reveal.dart';
-import '../today/today_format.dart';
 import '../today/today_providers.dart';
 
 /// Takvim & Tahmin sekmesi (Stitch "Takvim & Tahmin"): 7 günlük şerit + aylık
@@ -33,18 +32,36 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   void _shiftMonth(int delta) {
     setState(() {
-      _displayedMonth = DateTime(_displayedMonth.year, _displayedMonth.month + delta);
+      _displayedMonth = DateTime(
+        _displayedMonth.year,
+        _displayedMonth.month + delta,
+      );
     });
   }
 
-  void _openDay(SavedLocation location, DateTime day, DateTime today, bool isPro) {
-    if (isDateLocked(candidateLocalDate: day, todayLocalDate: today, isPro: isPro)) {
-      showUpgradeTeaser(context, ref, feature: '14-day forecasts');
+  void _openDay(
+    SavedLocation location,
+    DateTime day,
+    DateTime today,
+    bool isPro,
+  ) {
+    if (isDateLocked(
+      candidateLocalDate: day,
+      todayLocalDate: today,
+      isPro: isPro,
+    )) {
+      showUpgradeTeaser(
+        context,
+        ref,
+        feature: context.l10n('14-day forecasts', '14 günlük tahmin'),
+      );
       return;
     }
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => DayDetailScreen(location: location, localDate: day),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DayDetailScreen(location: location, localDate: day),
+      ),
+    );
   }
 
   @override
@@ -55,11 +72,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     _ensureInit(today);
 
     return SafeArea(
+      top: false,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          Reveal(child: _LocationHeader(location: location)),
-          const SizedBox(height: 16),
           Reveal(
             delay: const Duration(milliseconds: 60),
             child: _WeekStrip(
@@ -89,38 +105,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               onTapDay: (d) => _openDay(location, d, today, isPro),
             ),
           ),
-          if (!isPro) ...[
-            const SizedBox(height: 16),
-            const _AdPlaceholder(),
-          ],
+          if (!isPro) ...[const SizedBox(height: 16), const _AdPlaceholder()],
         ],
-      ),
-    );
-  }
-}
-
-class _LocationHeader extends StatelessWidget {
-  const _LocationHeader({required this.location});
-  final SavedLocation location;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Consumer(
-      builder: (context, ref, _) => InkWell(
-        borderRadius: BorderRadius.circular(6),
-        onTap: () => showLocationSwitcher(context, ref),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Icon(Icons.location_on, size: 18, color: scheme.tertiary),
-              const SizedBox(width: 6),
-              Text(location.name, style: Theme.of(context).textTheme.titleMedium),
-              Icon(Icons.expand_more, size: 20, color: scheme.onSurfaceVariant),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -147,12 +133,20 @@ class _WeekStrip extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Forecast',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineMedium
-                    ?.copyWith(fontSize: 22)),
-            Text('NEXT 7 DAYS', style: SoluTheme.labelCaps(context)),
+            Expanded(
+              child: Text(
+                context.l10n('Forecast', 'Tahmin'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.headlineMedium?.copyWith(fontSize: 22),
+              ),
+            ),
+            Text(
+              context.l10n('NEXT 7 DAYS', 'SONRAKİ 7 GÜN'),
+              style: SoluTheme.labelCaps(context),
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -165,12 +159,15 @@ class _WeekStrip extends ConsumerWidget {
             itemBuilder: (context, i) {
               final day = today.add(Duration(days: i));
               final locked = isDateLocked(
-                  candidateLocalDate: day, todayLocalDate: today, isPro: isPro);
+                candidateLocalDate: day,
+                todayLocalDate: today,
+                isPro: isPro,
+              );
               final label = i == 0
-                  ? 'Today'
+                  ? context.l10n('Today', 'Bugün')
                   : i == 1
-                      ? 'Tomorrow'
-                      : TodayFormat.shortWeekday(day);
+                  ? context.l10n('Tomorrow', 'Yarın')
+                  : _shortWeekday(context, day);
 
               return _DayStripCard(
                 label: label,
@@ -215,14 +212,21 @@ class _DayStripCard extends ConsumerWidget {
       body = Icon(Icons.lock_outline, color: scheme.onSurfaceVariant, size: 22);
     } else {
       final result = ref.watch(
-          solunarForDateProvider((location: location, localDate: day)));
+        solunarForDateProvider((location: location, localDate: day)),
+      );
       body = Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('${result.solunar.fishRating}/5',
-              style: SoluTheme.dataMono(context, size: 13, color: moss)),
+          Text(
+            '${result.solunar.fishRating}/5',
+            style: SoluTheme.dataMono(context, size: 13, color: moss),
+          ),
           const SizedBox(height: 4),
-          FishRating(rating: result.solunar.fishRating, size: 12, animate: false),
+          FishRating(
+            rating: result.solunar.fishRating,
+            size: 12,
+            animate: false,
+          ),
         ],
       );
     }
@@ -243,12 +247,22 @@ class _DayStripCard extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelMedium
-                    ?.copyWith(fontWeight: FontWeight.w700)),
-            SizedBox(height: 36, child: Center(child: body)),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            SizedBox(
+              height: 36,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: body,
+              ),
+            ),
           ],
         ),
       ),
@@ -257,16 +271,14 @@ class _DayStripCard extends ConsumerWidget {
 }
 
 class _MonthHeader extends StatelessWidget {
-  const _MonthHeader(
-      {required this.month, required this.onPrev, required this.onNext});
+  const _MonthHeader({
+    required this.month,
+    required this.onPrev,
+    required this.onNext,
+  });
   final DateTime month;
   final VoidCallback onPrev;
   final VoidCallback onNext;
-
-  static const _names = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -274,11 +286,17 @@ class _MonthHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         IconButton(onPressed: onPrev, icon: const Icon(Icons.chevron_left)),
-        Text('${_names[month.month - 1]} ${month.year}',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w700)),
+        Expanded(
+          child: Text(
+            MaterialLocalizations.of(context).formatMonthYear(month),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ),
         IconButton(onPressed: onNext, icon: const Icon(Icons.chevron_right)),
       ],
     );
@@ -300,8 +318,6 @@ class _MonthGrid extends StatelessWidget {
   final bool isPro;
   final void Function(DateTime) onTapDay;
 
-  static const _weekdayHeaders = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -309,17 +325,24 @@ class _MonthGrid extends StatelessWidget {
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
     // Pazar=0 .. Cumartesi=6 (ABD konvansiyonu, Stitch tasarımı).
     final leadingBlanks = firstOfMonth.weekday % 7;
+    final gridStart = firstOfMonth.subtract(Duration(days: leadingBlanks));
+    // Önceki ay günleri ilk haftayı tamamlar; ay sonunda sonraki ay günlerini
+    // göstermeyiz. Böylece odak seçili ayda kalır.
+    final totalCells = leadingBlanks + daysInMonth;
 
     return Column(
       children: [
         Row(
           children: [
-            for (final h in _weekdayHeaders)
+            for (final h in MaterialLocalizations.of(context).narrowWeekdays)
               Expanded(
                 child: Center(
-                  child: Text(h,
-                      style: SoluTheme.labelCaps(context)
-                          .copyWith(color: scheme.onSurfaceVariant)),
+                  child: Text(
+                    h,
+                    style: SoluTheme.labelCaps(
+                      context,
+                    ).copyWith(color: scheme.onSurfaceVariant),
+                  ),
                 ),
               ),
           ],
@@ -327,23 +350,28 @@ class _MonthGrid extends StatelessWidget {
         const SizedBox(height: 8),
         GridView.builder(
           shrinkWrap: true,
+          primary: false,
+          padding: EdgeInsets.zero,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: leadingBlanks + daysInMonth,
+          itemCount: totalCells,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
             mainAxisSpacing: 6,
             crossAxisSpacing: 6,
           ),
           itemBuilder: (context, index) {
-            if (index < leadingBlanks) return const SizedBox.shrink();
-            final dayNum = index - leadingBlanks + 1;
-            final date = DateTime(month.year, month.month, dayNum);
+            final date = gridStart.add(Duration(days: index));
+            final isCurrentMonth = date.month == month.month;
+            if (!isCurrentMonth) return _AdjacentMonthDay(date: date);
             return _MonthDayCell(
               date: date,
               location: location,
               isToday: _isSameDay(date, today),
               locked: isDateLocked(
-                  candidateLocalDate: date, todayLocalDate: today, isPro: isPro),
+                candidateLocalDate: date,
+                todayLocalDate: today,
+                isPro: isPro,
+              ),
               onTap: () => onTapDay(date),
             );
           },
@@ -354,6 +382,34 @@ class _MonthGrid extends StatelessWidget {
 
   static bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
+}
+
+String _shortWeekday(BuildContext context, DateTime day) {
+  const english = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const turkish = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+  return (context.isTurkish ? turkish : english)[day.weekday - 1];
+}
+
+/// Ana ay dışındaki günler yalnızca ızgarayı devamlı gösterir; seçilemez.
+class _AdjacentMonthDay extends StatelessWidget {
+  const _AdjacentMonthDay({required this.date});
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow.withValues(alpha: 0.42),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        '${date.day}',
+        style: SoluTheme.dataMono(context, size: 12, color: scheme.outline),
+      ),
+    );
+  }
 }
 
 class _MonthDayCell extends ConsumerWidget {
@@ -383,15 +439,19 @@ class _MonthDayCell extends ConsumerWidget {
       indicator = Icon(Icons.lock_outline, size: 11, color: scheme.outline);
     } else {
       final result = ref.watch(
-          solunarForDateProvider((location: location, localDate: date)));
+        solunarForDateProvider((location: location, localDate: date)),
+      );
       final rating = result.solunar.fishRating;
       if (rating >= 4) {
         bg = moss.withValues(alpha: 0.18);
       } else if (rating == 3) {
         bg = scheme.tertiary.withValues(alpha: 0.14);
       }
-      indicator = Icon(Icons.set_meal,
-          size: 11, color: rating >= 4 ? moss : scheme.tertiary);
+      indicator = Icon(
+        Icons.set_meal,
+        size: 11,
+        color: rating >= 4 ? moss : scheme.tertiary,
+      );
     }
 
     return InkWell(
@@ -401,14 +461,21 @@ class _MonthDayCell extends ConsumerWidget {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(6),
-          border: isToday ? Border.all(color: scheme.tertiary, width: 1.5) : null,
+          border: isToday
+              ? Border.all(color: scheme.tertiary, width: 1.5)
+              : null,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('${date.day}',
-                style: SoluTheme.dataMono(context,
-                    size: 12, color: locked ? scheme.outline : scheme.onSurface)),
+            Text(
+              '${date.day}',
+              style: SoluTheme.dataMono(
+                context,
+                size: 12,
+                color: locked ? scheme.outline : scheme.onSurface,
+              ),
+            ),
             const SizedBox(height: 2),
             indicator,
           ],
@@ -432,8 +499,16 @@ class _AdPlaceholder extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4)),
       ),
-      child: Text('ADVERTISEMENT · SPONSORED GEAR',
-          style: SoluTheme.labelCaps(context)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Text(
+          'ADVERTISEMENT · SPONSORED GEAR',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: SoluTheme.labelCaps(context),
+        ),
+      ),
     );
   }
 }

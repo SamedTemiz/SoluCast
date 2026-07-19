@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/localization.dart';
 import '../../data/location/location_service.dart';
 import '../../data/location/saved_location.dart';
 import '../location/location_providers.dart';
@@ -53,87 +54,120 @@ class _LocationSwitcherSheet extends ConsumerWidget {
     final visibleLocations = isPro
         ? state.locations
         : state.locations.where((loc) => loc.name == state.activeName).toList();
-    final lockedLocationCount = state.locations.length - visibleLocations.length;
+    final lockedLocationCount =
+        state.locations.length - visibleLocations.length;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Switch location', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          for (final loc in visibleLocations)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                loc.name == state.activeName
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_off,
-                color: loc.name == state.activeName
-                    ? scheme.tertiary
-                    : scheme.onSurfaceVariant,
-              ),
-              title: Text(loc.name),
-              onTap: () {
-                ref.read(locationsProvider.notifier).selectActive(loc.name);
-                Navigator.of(context).pop();
-              },
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n('Switch location', 'Konum değiştir'),
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-          const SizedBox(height: 8),
-          if (!state.active.isDeviceLocation) ...[
-            OutlinedButton.icon(
-              onPressed: () => _openAddLocationAfterClosingSwitcher(
-                context,
-                ref,
-                useCurrentImmediately: true,
+            const SizedBox(height: 12),
+            for (final loc in visibleLocations)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  loc.name == state.activeName
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: loc.name == state.activeName
+                      ? scheme.tertiary
+                      : scheme.onSurfaceVariant,
+                ),
+                title: Text(loc.name),
+                onTap: () {
+                  ref.read(locationsProvider.notifier).selectActive(loc.name);
+                  Navigator.of(context).pop();
+                },
               ),
-              icon: const Icon(Icons.my_location),
-              label: const Text('Use my current location'),
+            const SizedBox(height: 8),
+            if (!state.active.isDeviceLocation) ...[
+              OutlinedButton.icon(
+                onPressed: () => _openAddLocationAfterClosingSwitcher(
+                  context,
+                  ref,
+                  useCurrentImmediately: true,
+                ),
+                icon: const Icon(Icons.my_location),
+                label: Text(
+                  context.l10n(
+                    'Use my current location',
+                    'Mevcut konumumu kullan',
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(44),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            OutlinedButton.icon(
+              onPressed: () {
+                if (isLocationAddLocked(
+                  currentCount: state.locations.length,
+                  isPro: isPro,
+                )) {
+                  Navigator.of(context).pop();
+                  showUpgradeTeaser(
+                    context,
+                    ref,
+                    feature: context.l10n(
+                      'Multiple locations',
+                      'Birden fazla konum',
+                    ),
+                  );
+                  return;
+                }
+                _openAddLocationAfterClosingSwitcher(context, ref);
+              },
+              icon: const Icon(Icons.add),
+              label: Text(context.l10n('Add location', 'Konum ekle')),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(44),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6)),
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
             ),
-            const SizedBox(height: 8),
+            if (lockedLocationCount > 0) ...[
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.lock_outline, color: scheme.outline),
+                title: Text(
+                  context.isTurkish
+                      ? '$lockedLocationCount kayıtlı konum'
+                      : '$lockedLocationCount saved ${lockedLocationCount == 1 ? 'location' : 'locations'}',
+                ),
+                subtitle: Text(
+                  context.l10n(
+                    'Available with AnglerPulse Pro',
+                    'AnglerPulse Pro ile kullanılabilir',
+                  ),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => showUpgradeTeaser(
+                  context,
+                  ref,
+                  feature: context.l10n(
+                    'Multiple locations',
+                    'Birden fazla konum',
+                  ),
+                ),
+              ),
+            ],
           ],
-          OutlinedButton.icon(
-            onPressed: () {
-              if (isLocationAddLocked(
-                  currentCount: state.locations.length, isPro: isPro)) {
-                Navigator.of(context).pop();
-                showUpgradeTeaser(context, ref, feature: 'Multiple locations');
-                return;
-              }
-              _openAddLocationAfterClosingSwitcher(context, ref);
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Add location'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(44),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6)),
-            ),
-          ),
-          if (lockedLocationCount > 0) ...[
-            const SizedBox(height: 12),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.lock_outline, color: scheme.outline),
-              title: Text(
-                '$lockedLocationCount saved ${lockedLocationCount == 1 ? 'location' : 'locations'}',
-              ),
-              subtitle: const Text('Available with SoluCast Pro'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => showUpgradeTeaser(
-                context,
-                ref,
-                feature: 'Multiple locations',
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -150,10 +184,14 @@ void showAddLocationSheet(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (sheetContext) => Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
-      child: _AddLocationSheet(useCurrentImmediately: useCurrentImmediately),
+    builder: (sheetContext) => SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
+        child: _AddLocationSheet(useCurrentImmediately: useCurrentImmediately),
+      ),
     ),
   );
 }
@@ -216,14 +254,13 @@ class _AddLocationSheetState extends ConsumerState<_AddLocationSheet> {
         final state = ref.read(locationsProvider);
         final isPro = ref.read(isProPreviewProvider);
         final atFreeLimit = isLocationAddLocked(
-            currentCount: state.locations.length, isPro: isPro);
+          currentCount: state.locations.length,
+          isPro: isPro,
+        );
         // Aktif kayıt zaten cihaz konumuysa GPS onu tazeler (her katmanda):
         // aynı görünen ad üretilirse add() sessiz no-op olur ve yeni
         // koordinatlar kaybolurdu. Free limitte de tek hak güncellenir.
-        _pick(
-          loc,
-          replaceActive: atFreeLimit || state.active.isDeviceLocation,
-        );
+        _pick(loc, replaceActive: atFreeLimit || state.active.isDeviceLocation);
       }
     } on LocationFailure catch (e) {
       if (mounted) {
@@ -233,8 +270,16 @@ class _AddLocationSheetState extends ConsumerState<_AddLocationSheet> {
     } catch (_) {
       if (mounted) {
         setState(() => _gpsBusy = false);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Couldn\'t get your location. Try searching.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              context.l10n(
+                'Couldn\'t get your location. Try searching.',
+                'Konumunuz alınamadı. Aramayı deneyin.',
+              ),
+            ),
+          ),
+        );
       }
     }
   }
@@ -249,28 +294,52 @@ class _AddLocationSheetState extends ConsumerState<_AddLocationSheet> {
     final shouldOpenSettings = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        icon: Icon(opensAppSettings ? Icons.settings_outlined : Icons.location_off),
+        icon: Icon(
+          opensAppSettings ? Icons.settings_outlined : Icons.location_off,
+        ),
         title: Text(
           opensLocationSettings
-              ? 'Turn on location services'
-              : 'Allow location access',
+              ? context.l10n(
+                  'Turn on location services',
+                  'Konum hizmetlerini açın',
+                )
+              : context.l10n(
+                  'Allow location access',
+                  'Konum erişimine izin verin',
+                ),
         ),
         content: Text(
           opensLocationSettings
-              ? 'Turn on Location in your device settings to use your current position.'
+              ? context.l10n(
+                  'Turn on Location in your device settings to use your current position.',
+                  'Mevcut konumunuzu kullanmak için cihaz ayarlarından Konum’u açın.',
+                )
               : opensAppSettings
-                  ? 'Location access was permanently denied. Enable it in app settings to use your current position.'
-                  : 'Allow location access when prompted, or search for a city instead.',
+              ? context.l10n(
+                  'Location access was permanently denied. Enable it in app settings to use your current position.',
+                  'Konum erişimi kalıcı olarak reddedildi. Uygulama ayarlarından etkinleştirin.',
+                )
+              : context.l10n(
+                  'Allow location access when prompted, or search for a city instead.',
+                  'İstendiğinde konum erişimine izin verin veya şehir arayın.',
+                ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Not now'),
+            child: Text(context.l10n('Not now', 'Şimdi değil')),
           ),
           if (opensLocationSettings || opensAppSettings)
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(opensAppSettings ? 'Open app settings' : 'Open settings'),
+              child: Text(
+                opensAppSettings
+                    ? context.l10n(
+                        'Open app settings',
+                        'Uygulama ayarlarını aç',
+                      )
+                    : context.l10n('Open settings', 'Ayarları aç'),
+              ),
             ),
         ],
       ),
@@ -297,7 +366,10 @@ class _AddLocationSheetState extends ConsumerState<_AddLocationSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Add a location', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            context.l10n('Add a location', 'Konum ekle'),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 12),
           FilledButton.tonalIcon(
             onPressed: _gpsBusy ? null : _useCurrent,
@@ -305,13 +377,17 @@ class _AddLocationSheetState extends ConsumerState<_AddLocationSheet> {
                 ? const SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2))
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Icon(Icons.my_location),
-            label: const Text('Use my current location'),
+            label: Text(
+              context.l10n('Use my current location', 'Mevcut konumumu kullan'),
+            ),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -320,7 +396,7 @@ class _AddLocationSheetState extends ConsumerState<_AddLocationSheet> {
             autofocus: false,
             onChanged: _onChanged,
             decoration: InputDecoration(
-              hintText: 'Search a city…',
+              hintText: context.l10n('Search a city…', 'Şehir ara…'),
               prefixIcon: const Icon(Icons.search),
               filled: true,
               fillColor: scheme.surfaceContainerHigh,
@@ -331,17 +407,16 @@ class _AddLocationSheetState extends ConsumerState<_AddLocationSheet> {
             ),
           ),
           const SizedBox(height: 8),
-          SizedBox(
-            height: 260,
-            child: _buildResults(context, results),
-          ),
+          SizedBox(height: 260, child: _buildResults(context, results)),
         ],
       ),
     );
   }
 
   Widget _buildResults(
-      BuildContext context, AsyncValue<List<SavedLocation>>? results) {
+    BuildContext context,
+    AsyncValue<List<SavedLocation>>? results,
+  ) {
     final scheme = Theme.of(context).colorScheme;
     if (results == null) {
       // Arama boşken hızlı öneriler (preset şehirler).
@@ -349,9 +424,13 @@ class _AddLocationSheetState extends ConsumerState<_AddLocationSheet> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Text('SUGGESTIONS',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: scheme.onSurfaceVariant, letterSpacing: 0.8)),
+            child: Text(
+              context.l10n('SUGGESTIONS', 'ÖNERİLER'),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                letterSpacing: 0.8,
+              ),
+            ),
           ),
           for (final p in SavedLocation.presets)
             ListTile(
@@ -366,20 +445,25 @@ class _AddLocationSheetState extends ConsumerState<_AddLocationSheet> {
     return results.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, _) => Center(
-        child: Text('Search failed. Check your connection.',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: scheme.onSurfaceVariant)),
+        child: Text(
+          context.l10n(
+            'Search failed. Check your connection.',
+            'Arama başarısız. Bağlantınızı kontrol edin.',
+          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+        ),
       ),
       data: (list) {
         if (list.isEmpty) {
           return Center(
-            child: Text('No matches.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: scheme.onSurfaceVariant)),
+            child: Text(
+              context.l10n('No matches.', 'Eşleşme bulunamadı.'),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
           );
         }
         return ListView.builder(
@@ -388,11 +472,12 @@ class _AddLocationSheetState extends ConsumerState<_AddLocationSheet> {
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.place_outlined),
             title: Text(list[i].name),
-            subtitle: Text(list[i].timeZoneId,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelSmall
-                    ?.copyWith(color: scheme.onSurfaceVariant)),
+            subtitle: Text(
+              list[i].timeZoneId,
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
             onTap: () => _pick(list[i]),
           ),
         );

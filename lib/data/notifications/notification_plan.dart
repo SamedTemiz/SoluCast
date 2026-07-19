@@ -36,8 +36,17 @@ class NotifiableDay {
 }
 
 /// Kimlik aralıkları — yeniden planlamada çakışmayı önler (stabil id).
-const _dailySummaryIdBase = 1000;
-const _highScoreIdBase = 2000;
+const dailySummaryIdBase = 1000;
+const highScoreIdBase = 2000;
+
+/// IDs owned by the rolling forecast scheduler. Period reminders use a
+/// different range and must survive an automatic forecast refresh.
+Iterable<int> managedForecastNotificationIds({int days = 14}) sync* {
+  for (var i = 0; i < days; i++) {
+    yield dailySummaryIdBase + i;
+    yield highScoreIdBase + i;
+  }
+}
 
 /// [days] için bildirimleri planlar.
 ///
@@ -54,6 +63,7 @@ List<PlannedNotification> planNotifications({
   int summaryMinute = 0,
   int alertHour = 18,
   int highScoreThreshold = 4,
+  bool turkish = false,
 }) {
   final planned = <PlannedNotification>[];
 
@@ -61,35 +71,57 @@ List<PlannedNotification> planNotifications({
     final day = days[i];
 
     if (dailySummaryEnabled) {
-      final at = DateTime(day.localDate.year, day.localDate.month,
-          day.localDate.day, summaryHour, summaryMinute);
+      final at = DateTime(
+        day.localDate.year,
+        day.localDate.month,
+        day.localDate.day,
+        summaryHour,
+        summaryMinute,
+      );
       if (at.isAfter(nowLocal)) {
         final window = day.firstMajorWindow;
-        planned.add(PlannedNotification(
-          id: _dailySummaryIdBase + i,
-          kind: PlannedKind.dailySummary,
-          scheduledLocal: at,
-          title: 'Today: ${day.fishRating}/5',
-          body: window == null
-              ? 'Tap to see today\'s solunar periods.'
-              : 'Best window — major $window',
-        ));
+        planned.add(
+          PlannedNotification(
+            id: dailySummaryIdBase + i,
+            kind: PlannedKind.dailySummary,
+            scheduledLocal: at,
+            title: turkish
+                ? 'Bugün: ${day.fishRating}/5'
+                : 'Today: ${day.fishRating}/5',
+            body: window == null
+                ? (turkish
+                      ? 'Bugünün solunar dönemlerini görmek için dokunun.'
+                      : 'Tap to see today\'s solunar periods.')
+                : (turkish
+                      ? 'En iyi aralık — ana dönem $window'
+                      : 'Best window — major $window'),
+          ),
+        );
       }
     }
 
     if (highScoreAlertEnabled && day.fishRating >= highScoreThreshold) {
       // Yüksek skorlu günden bir önceki akşam haber ver.
-      final eve = DateTime(day.localDate.year, day.localDate.month,
-              day.localDate.day, alertHour)
-          .subtract(const Duration(days: 1));
+      final eve = DateTime(
+        day.localDate.year,
+        day.localDate.month,
+        day.localDate.day,
+        alertHour,
+      ).subtract(const Duration(days: 1));
       if (eve.isAfter(nowLocal)) {
-        planned.add(PlannedNotification(
-          id: _highScoreIdBase + i,
-          kind: PlannedKind.highScoreAlert,
-          scheduledLocal: eve,
-          title: 'Tomorrow looks good: ${day.fishRating}/5',
-          body: 'Plan your trip — conditions line up tomorrow.',
-        ));
+        planned.add(
+          PlannedNotification(
+            id: highScoreIdBase + i,
+            kind: PlannedKind.highScoreAlert,
+            scheduledLocal: eve,
+            title: turkish
+                ? 'Yarın iyi görünüyor: ${day.fishRating}/5'
+                : 'Tomorrow looks good: ${day.fishRating}/5',
+            body: turkish
+                ? 'Planınızı yapın — koşullar yarın uyumlu.'
+                : 'Plan your trip — conditions line up tomorrow.',
+          ),
+        );
       }
     }
   }

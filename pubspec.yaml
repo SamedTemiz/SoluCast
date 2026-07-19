@@ -1,5 +1,5 @@
-name: solucast
-description: "Best fishing times — solunar forecast"
+name: angler_pulse
+description: "Offline fishing forecasts and better trip decisions"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -44,10 +46,12 @@ dependencies:
   geocoding: ^4.0.0
   flutter_timezone: ^5.1.0
   flutter_local_notifications: ^22.0.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.3
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -56,11 +60,20 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/anglerpulse-app-icon-cropped.png
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
 flutter:
+
+  assets:
+    - assets/images/fishing_condition_bg.png
+    - assets/images/fishing_condition_light_bg.png
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

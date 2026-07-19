@@ -30,10 +30,13 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   void _startTrial() {
     // RevenueCat gelene kadar: yerel Pro-preview, şeffaf etiketle.
     ref.read(isProPreviewProvider.notifier).set(true);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text(
-          'Purchases arrive with RevenueCat — Pro preview enabled for now.'),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Purchases arrive with RevenueCat — Pro preview enabled for now.',
+        ),
+      ),
+    );
     Navigator.of(context).pop(true);
   }
 
@@ -55,9 +58,12 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 child: widget.fromOnboarding
                     ? TextButton(
                         onPressed: () => Navigator.of(context).pop(false),
-                        child: Text('Skip',
-                            style: text.labelLarge
-                                ?.copyWith(color: scheme.onSurfaceVariant)),
+                        child: Text(
+                          'Skip',
+                          style: text.labelLarge?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
                       )
                     : IconButton(
                         onPressed: () => Navigator.of(context).pop(false),
@@ -74,15 +80,18 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       children: [
                         Icon(Icons.set_meal, size: 44, color: moss),
                         const SizedBox(height: 10),
-                        Text('Fish smarter with Pro',
-                            textAlign: TextAlign.center,
-                            style: text.headlineLarge),
+                        Text(
+                          'Fish smarter with Pro',
+                          textAlign: TextAlign.center,
+                          style: text.headlineLarge,
+                        ),
                         const SizedBox(height: 6),
                         Text(
                           'Plan every trip with the full 14-day forecast.',
                           textAlign: TextAlign.center,
-                          style: text.bodyMedium
-                              ?.copyWith(color: scheme.onSurfaceVariant),
+                          style: text.bodyMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ),
@@ -138,19 +147,25 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                         foregroundColor: scheme.surface,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       onPressed: _startTrial,
-                      child: const Text('Start 7-day free trial',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w800, fontSize: 16)),
+                      child: const Text(
+                        'Start 7-day free trial',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '7-day free trial, then ${_selected == _Plan.yearly ? '\$23.99/year' : '\$3.99/month'} · Cancel anytime',
-                    style: text.labelSmall
-                        ?.copyWith(color: scheme.onSurfaceVariant),
+                    style: text.labelSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -190,16 +205,21 @@ class _ComparisonTable extends StatelessWidget {
             children: [
               const Expanded(child: SizedBox()),
               SizedBox(
-                  width: 52,
-                  child: Text('FREE',
-                      textAlign: TextAlign.center,
-                      style: SoluTheme.labelCaps(context))),
+                width: 52,
+                child: Text(
+                  'FREE',
+                  textAlign: TextAlign.center,
+                  style: SoluTheme.labelCaps(context),
+                ),
+              ),
               SizedBox(
-                  width: 52,
-                  child: Text('PRO',
-                      textAlign: TextAlign.center,
-                      style: SoluTheme.labelCaps(context)
-                          .copyWith(color: moss))),
+                width: 52,
+                child: Text(
+                  'PRO',
+                  textAlign: TextAlign.center,
+                  style: SoluTheme.labelCaps(context).copyWith(color: moss),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -212,33 +232,49 @@ class _ComparisonTable extends StatelessWidget {
                   SizedBox(
                     width: 52,
                     child: label == 'Saved locations'
-                        ? Text('1',
+                        ? Text(
+                            '1',
                             textAlign: TextAlign.center,
-                            style: SoluTheme.dataMono(context,
-                                size: 13, color: scheme.onSurfaceVariant))
-                        : Icon(free ? Icons.check : Icons.remove,
+                            style: SoluTheme.dataMono(
+                              context,
+                              size: 13,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          )
+                        : Icon(
+                            free ? Icons.check : Icons.remove,
                             size: 16,
                             color: free
                                 ? scheme.onSurfaceVariant
-                                : scheme.outlineVariant),
+                                : scheme.outlineVariant,
+                          ),
                   ),
                   SizedBox(
                     width: 52,
                     child: label == 'Saved locations'
-                        ? Text('∞',
+                        ? Text(
+                            '∞',
                             textAlign: TextAlign.center,
-                            style: SoluTheme.dataMono(context,
-                                size: 13, color: moss))
-                        : Icon(pro ? Icons.check : Icons.remove,
-                            size: 16, color: moss),
+                            style: SoluTheme.dataMono(
+                              context,
+                              size: 13,
+                              color: moss,
+                            ),
+                          )
+                        : Icon(
+                            pro ? Icons.check : Icons.remove,
+                            size: 16,
+                            color: moss,
+                          ),
                   ),
                 ],
               ),
             ),
             if (label != _rows.last.$1)
               Divider(
-                  height: 1,
-                  color: scheme.outlineVariant.withValues(alpha: 0.3)),
+                height: 1,
+                color: scheme.outlineVariant.withValues(alpha: 0.3),
+              ),
           ],
         ],
       ),
@@ -276,8 +312,9 @@ class _PlanCard extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
         decoration: BoxDecoration(
-          color:
-              selected ? moss.withValues(alpha: 0.10) : scheme.surfaceContainer,
+          color: selected
+              ? moss.withValues(alpha: 0.10)
+              : scheme.surfaceContainer,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: selected
@@ -295,31 +332,44 @@ class _PlanCard extends StatelessWidget {
                   ? null
                   : Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: moss,
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: Text(badge!,
-                          style: SoluTheme.dataMono(context,
-                              size: 9,
-                              color: scheme.surface,
-                              weight: FontWeight.w800)),
+                      child: Text(
+                        badge!,
+                        style: SoluTheme.dataMono(
+                          context,
+                          size: 9,
+                          color: scheme.surface,
+                          weight: FontWeight.w800,
+                        ),
+                      ),
                     ),
             ),
             const SizedBox(height: 8),
             Text(title, style: text.titleSmall),
             const SizedBox(height: 4),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 2,
+              runSpacing: 2,
               children: [
-                Text(price,
-                    style: text.titleLarge?.copyWith(
-                        color: selected ? moss : scheme.onSurface)),
-                Text(per,
-                    style: text.labelSmall
-                        ?.copyWith(color: scheme.onSurfaceVariant)),
+                Text(
+                  price,
+                  style: text.titleLarge?.copyWith(
+                    color: selected ? moss : scheme.onSurface,
+                  ),
+                ),
+                Text(
+                  per,
+                  style: text.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ],
             ),
           ],

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:solucast/data/location/saved_location.dart';
-import 'package:solucast/features/today/today_providers.dart';
+import 'package:angler_pulse/data/location/saved_location.dart';
+import 'package:angler_pulse/features/today/today_providers.dart';
 
 /// Uçtan uca: IANA tz çözümü + efemeris + solunar motoru DST geçiş
 /// günlerinde bile çökmeden, anlamlı sonuç üretir (T2 önlemi).
@@ -17,8 +17,12 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    final result = container.read(solunarForDateProvider(
-        (location: newYork, localDate: DateTime(2026, 3, 8))));
+    final result = container.read(
+      solunarForDateProvider((
+        location: newYork,
+        localDate: DateTime(2026, 3, 8),
+      )),
+    );
 
     expect(result.ephemeris.sunrise, isNotNull);
     expect(result.ephemeris.sunset, isNotNull);
@@ -30,8 +34,12 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    final result = container.read(solunarForDateProvider(
-        (location: newYork, localDate: DateTime(2026, 11, 1))));
+    final result = container.read(
+      solunarForDateProvider((
+        location: newYork,
+        localDate: DateTime(2026, 11, 1),
+      )),
+    );
 
     expect(result.ephemeris.sunrise, isNotNull);
     expect(result.ephemeris.sunset, isNotNull);
@@ -49,8 +57,12 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    final result = container.read(solunarForDateProvider(
-        (location: sydney, localDate: DateTime(2026, 1, 15))));
+    final result = container.read(
+      solunarForDateProvider((
+        location: sydney,
+        localDate: DateTime(2026, 1, 15),
+      )),
+    );
 
     expect(result.ephemeris.utcOffset, const Duration(hours: 11));
     expect(result.ephemeris.sunrise, isNotNull);

@@ -16,8 +16,10 @@ final weatherRepositoryProvider = Provider<WeatherRepository>((ref) {
 
 /// Bir konum için hava — async. Ağ/cache detayı repo'da. Hata → null
 /// (uygulama astronomiyle çalışmaya devam eder, F3.4).
-final weatherProvider =
-    FutureProvider.family<WeatherData?, SavedLocation>((ref, location) async {
+final weatherProvider = FutureProvider.family<WeatherData?, SavedLocation>((
+  ref,
+  location,
+) async {
   try {
     return await ref.watch(weatherRepositoryProvider).fetchCurrent(location);
   } catch (_) {
@@ -30,6 +32,21 @@ final activeWeatherProvider = FutureProvider<WeatherData?>((ref) {
   final location = ref.watch(activeLocationProvider);
   return ref.watch(weatherProvider(location).future);
 });
+
+typedef HourlyWeatherRequest = ({SavedLocation location, DateTime localDate});
+
+final hourlyWeatherProvider =
+    FutureProvider.family<List<HourlyWeatherData>, HourlyWeatherRequest>((
+      ref,
+      request,
+    ) async {
+      final repository = ref.watch(weatherRepositoryProvider);
+      if (repository is! HourlyWeatherRepository) return const [];
+      return (repository as HourlyWeatherRepository).fetchHourly(
+        request.location,
+        request.localDate,
+      );
+    });
 
 /// Bugünün skoru — hava **varsa** dahil edilmiş hali. Astronomi tabanı
 /// [todayResultProvider]'dan anında gelir (ilk render ağ BEKLEMEZ); hava

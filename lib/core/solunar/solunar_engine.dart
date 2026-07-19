@@ -25,34 +25,50 @@ class SolunarEngine {
     this.minorHalfWidth = const Duration(minutes: 30),
   });
 
-  SolunarDay evaluate(
-    DayEphemeris eph, {
-    WeatherInput? weather,
-  }) {
+  SolunarDay evaluate(DayEphemeris eph, {WeatherInput? weather}) {
     final twilightWindows = _twilightWindows(eph);
 
     final majors = <SolunarPeriod>[
       for (final t in eph.moonUpperTransits)
-        _period(SolunarPeriodType.major, SolunarPeriodKind.upperTransit, t,
-            majorHalfWidth, twilightWindows),
+        _period(
+          SolunarPeriodType.major,
+          SolunarPeriodKind.upperTransit,
+          t,
+          majorHalfWidth,
+          twilightWindows,
+        ),
       for (final t in eph.moonLowerTransits)
-        _period(SolunarPeriodType.major, SolunarPeriodKind.lowerTransit, t,
-            majorHalfWidth, twilightWindows),
+        _period(
+          SolunarPeriodType.major,
+          SolunarPeriodKind.lowerTransit,
+          t,
+          majorHalfWidth,
+          twilightWindows,
+        ),
     ]..sort((a, b) => a.start.compareTo(b.start));
 
     final minors = <SolunarPeriod>[
       for (final t in eph.moonrises)
-        _period(SolunarPeriodType.minor, SolunarPeriodKind.moonrise, t,
-            minorHalfWidth, twilightWindows),
+        _period(
+          SolunarPeriodType.minor,
+          SolunarPeriodKind.moonrise,
+          t,
+          minorHalfWidth,
+          twilightWindows,
+        ),
       for (final t in eph.moonsets)
-        _period(SolunarPeriodType.minor, SolunarPeriodKind.moonset, t,
-            minorHalfWidth, twilightWindows),
+        _period(
+          SolunarPeriodType.minor,
+          SolunarPeriodKind.moonset,
+          t,
+          minorHalfWidth,
+          twilightWindows,
+        ),
     ]..sort((a, b) => a.start.compareTo(b.start));
 
     // --- Faktörler ---
     final hasWeather = weather?.hasData ?? false;
-    final effectiveWeights =
-        hasWeather ? weights : weights.withoutPressure();
+    final effectiveWeights = hasWeather ? weights : weights.withoutPressure();
 
     final moonPhaseRaw = _moonPhaseRaw(eph.moonAgeFraction);
     final twilightRaw = _twilightOverlapRaw(majors, minors);
@@ -61,7 +77,11 @@ class SolunarEngine {
 
     final factors = <ScoreFactor>[
       _factor('moon_phase', moonPhaseRaw, effectiveWeights.moonPhase),
-      _factor('twilight_overlap', twilightRaw, effectiveWeights.twilightOverlap),
+      _factor(
+        'twilight_overlap',
+        twilightRaw,
+        effectiveWeights.twilightOverlap,
+      ),
       if (hasWeather)
         _factor('pressure_trend', pressureRaw, effectiveWeights.pressureTrend),
       _factor('seasonal', seasonalRaw, effectiveWeights.seasonal),
@@ -94,7 +114,8 @@ class SolunarEngine {
     final start = peak.subtract(halfWidth);
     final end = peak.add(halfWidth);
     final overlaps = twilightWindows.any(
-        (w) => start.isBefore(w.end) && end.isAfter(w.start));
+      (w) => start.isBefore(w.end) && end.isAfter(w.start),
+    );
     return SolunarPeriod(
       type: type,
       kind: kind,
@@ -110,14 +131,17 @@ class SolunarEngine {
   List<({DateTime start, DateTime end})> _twilightWindows(DayEphemeris e) {
     final windows = <({DateTime start, DateTime end})>[];
 
-    final dawnStart = e.civilDawn ?? e.sunrise?.subtract(const Duration(minutes: 30));
-    final dawnEnd = e.sunrise?.add(const Duration(minutes: 60)) ??
+    final dawnStart =
+        e.civilDawn ?? e.sunrise?.subtract(const Duration(minutes: 30));
+    final dawnEnd =
+        e.sunrise?.add(const Duration(minutes: 60)) ??
         e.civilDawn?.add(const Duration(minutes: 90));
     if (dawnStart != null && dawnEnd != null) {
       windows.add((start: dawnStart, end: dawnEnd));
     }
 
-    final duskStart = e.sunset?.subtract(const Duration(minutes: 60)) ??
+    final duskStart =
+        e.sunset?.subtract(const Duration(minutes: 60)) ??
         e.civilDusk?.subtract(const Duration(minutes: 90));
     final duskEnd = e.civilDusk ?? e.sunset?.add(const Duration(minutes: 30));
     if (duskStart != null && duskEnd != null) {
@@ -142,7 +166,9 @@ class SolunarEngine {
   /// Periyot-alacakaranlık çakışması: her çakışan major +0.5, minor +0.25; 1.0'da
   /// tavan. Şafak/akşamla çakışan bir major, "prime day"in imzasıdır.
   double _twilightOverlapRaw(
-      List<SolunarPeriod> majors, List<SolunarPeriod> minors) {
+    List<SolunarPeriod> majors,
+    List<SolunarPeriod> minors,
+  ) {
     var v = 0.0;
     for (final p in majors) {
       if (p.overlapsTwilight) v += 0.5;
@@ -164,11 +190,11 @@ class SolunarEngine {
   }
 
   ScoreFactor _factor(String key, double raw, double weight) => ScoreFactor(
-        key: key,
-        raw: raw,
-        weight: weight,
-        contribution: raw * weight * 100.0,
-      );
+    key: key,
+    raw: raw,
+    weight: weight,
+    contribution: raw * weight * 100.0,
+  );
 
   int _fishRating(int score) {
     if (score >= 80) return 5;

@@ -20,20 +20,20 @@ class SavedLocation {
   /// Kalıcılık için JSON. GPS/geocoding ile eklenen özel konumlar da böylece
   /// preset'e bağlı kalmadan saklanır.
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'lat': latitude,
-        'lon': longitude,
-        'tz': timeZoneId,
-        'isDeviceLocation': isDeviceLocation,
-      };
+    'name': name,
+    'lat': latitude,
+    'lon': longitude,
+    'tz': timeZoneId,
+    'isDeviceLocation': isDeviceLocation,
+  };
 
   factory SavedLocation.fromJson(Map<String, dynamic> json) => SavedLocation(
-        name: json['name'] as String,
-        latitude: (json['lat'] as num).toDouble(),
-        longitude: (json['lon'] as num).toDouble(),
-        timeZoneId: json['tz'] as String,
-        isDeviceLocation: json['isDeviceLocation'] as bool? ?? false,
-      );
+    name: json['name'] as String,
+    latitude: (json['lat'] as num).toDouble(),
+    longitude: (json['lon'] as num).toDouble(),
+    timeZoneId: json['tz'] as String,
+    isDeviceLocation: json['isDeviceLocation'] as bool? ?? false,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -64,29 +64,34 @@ class SavedLocation {
   static const presets = [
     demo,
     SavedLocation(
-        name: 'Miami',
-        latitude: 25.7617,
-        longitude: -80.1918,
-        timeZoneId: 'America/New_York'),
+      name: 'Miami',
+      latitude: 25.7617,
+      longitude: -80.1918,
+      timeZoneId: 'America/New_York',
+    ),
     SavedLocation(
-        name: 'Lake Tahoe',
-        latitude: 39.0968,
-        longitude: -120.0324,
-        timeZoneId: 'America/Los_Angeles'),
+      name: 'Lake Tahoe',
+      latitude: 39.0968,
+      longitude: -120.0324,
+      timeZoneId: 'America/Los_Angeles',
+    ),
     SavedLocation(
-        name: 'Chesapeake Bay',
-        latitude: 37.5,
-        longitude: -76.2,
-        timeZoneId: 'America/New_York'),
+      name: 'Chesapeake Bay',
+      latitude: 37.5,
+      longitude: -76.2,
+      timeZoneId: 'America/New_York',
+    ),
     SavedLocation(
-        name: 'Sydney',
-        latitude: -33.8688,
-        longitude: 151.2093,
-        timeZoneId: 'Australia/Sydney'),
+      name: 'Sydney',
+      latitude: -33.8688,
+      longitude: 151.2093,
+      timeZoneId: 'Australia/Sydney',
+    ),
     SavedLocation(
-        name: 'Tromsø',
-        latitude: 69.6492,
-        longitude: 18.9553,
-        timeZoneId: 'Europe/Oslo'),
+      name: 'Tromsø',
+      latitude: 69.6492,
+      longitude: 18.9553,
+      timeZoneId: 'Europe/Oslo',
+    ),
   ];
 }

@@ -6,6 +6,7 @@ import '../../app/theme.dart';
 import '../../data/prefs/preferences.dart';
 import '../notifications/notification_providers.dart';
 import '../paywall/paywall_screen.dart';
+import '../settings/settings_providers.dart';
 
 /// Onboarding tamamlandı mı? Kalıcı — app açılış rotası buna göre seçilir.
 class OnboardingDone extends Notifier<bool> {
@@ -16,14 +17,13 @@ class OnboardingDone extends Notifier<bool> {
 
   void complete() {
     state = true;
-    ref
-        .read(sharedPreferencesProvider)
-        .setBool(PrefKeys.onboardingDone, true);
+    ref.read(sharedPreferencesProvider).setBool(PrefKeys.onboardingDone, true);
   }
 }
 
-final onboardingDoneProvider =
-    NotifierProvider<OnboardingDone, bool>(OnboardingDone.new);
+final onboardingDoneProvider = NotifierProvider<OnboardingDone, bool>(
+  OnboardingDone.new,
+);
 
 /// İlk açılış akışı (screens.md §1): 3 adım + soft paywall.
 /// Hesap/kayıt YOK — izinler "neden istiyoruz" açıklamasıyla, reddedilebilir
@@ -60,9 +60,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _finishWithPaywall() async {
     // Soft paywall: kapatılabilir, onboarding'i bloklamaz.
-    await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => const PaywallScreen(fromOnboarding: true),
-    ));
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const PaywallScreen(fromOnboarding: true),
+      ),
+    );
     if (mounted) ref.read(onboardingDoneProvider.notifier).complete();
   }
 
@@ -83,7 +85,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     try {
       final service = ref.read(notificationServiceProvider);
       await service.initialize();
-      await service.requestPermissions();
+      final granted = await service.requestPermissions();
+      if (granted) {
+        ref.read(notificationSettingsProvider.notifier).setDailySummary(true);
+        ref.read(notificationSettingsProvider.notifier).setHighScoreAlert(true);
+      }
     } catch (_) {}
     _next();
   }
@@ -189,49 +195,64 @@ class _OnboardPage extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final moss = SoluPalette.of(context).neonMoss;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Icon(icon, size: 72, color: scheme.tertiary),
-          const SizedBox(height: 28),
-          Text(title, textAlign: TextAlign.center, style: text.headlineLarge),
-          const SizedBox(height: 12),
-          Text(
-            body,
-            textAlign: TextAlign.center,
-            style: text.bodyMedium?.copyWith(
-              color: scheme.onSurfaceVariant,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 36),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: moss,
-              foregroundColor: scheme.surface,
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: onCta,
-            child: Text(cta,
-                style: const TextStyle(fontWeight: FontWeight.w800)),
-          ),
-          SizedBox(
-            height: 44,
-            child: skipLabel == null
-                ? null
-                : TextButton(
-                    onPressed: onSkip,
-                    child: Text(skipLabel!,
-                        style: text.labelLarge
-                            ?.copyWith(color: scheme.onSurfaceVariant)),
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Icon(icon, size: 72, color: scheme.tertiary),
+              const SizedBox(height: 28),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: text.headlineLarge,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                body,
+                textAlign: TextAlign.center,
+                style: text.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 36),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: moss,
+                  foregroundColor: scheme.surface,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
+                ),
+                onPressed: onCta,
+                child: Text(
+                  cta,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              SizedBox(
+                height: 44,
+                child: skipLabel == null
+                    ? null
+                    : TextButton(
+                        onPressed: onSkip,
+                        child: Text(
+                          skipLabel!,
+                          style: text.labelLarge?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

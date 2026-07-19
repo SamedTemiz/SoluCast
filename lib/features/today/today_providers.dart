@@ -25,15 +25,18 @@ class LocationsState {
 
   const LocationsState({required this.locations, required this.activeName});
 
-  SavedLocation get active =>
-      locations.firstWhere((l) => l.name == activeName,
-          orElse: () => locations.first);
+  SavedLocation get active => locations.firstWhere(
+    (l) => l.name == activeName,
+    orElse: () => locations.first,
+  );
 
-  LocationsState copyWith({List<SavedLocation>? locations, String? activeName}) =>
-      LocationsState(
-        locations: locations ?? this.locations,
-        activeName: activeName ?? this.activeName,
-      );
+  LocationsState copyWith({
+    List<SavedLocation>? locations,
+    String? activeName,
+  }) => LocationsState(
+    locations: locations ?? this.locations,
+    activeName: activeName ?? this.activeName,
+  );
 }
 
 class LocationsController extends Notifier<LocationsState> {
@@ -55,8 +58,9 @@ class LocationsController extends Notifier<LocationsState> {
       final active = prefs.getString(PrefKeys.activeLocation);
       return LocationsState(
         locations: list,
-        activeName:
-            list.any((l) => l.name == active) ? active! : list.first.name,
+        activeName: list.any((l) => l.name == active)
+            ? active!
+            : list.first.name,
       );
     } catch (_) {
       // Bozuk veri → demo'ya güvenli düşüş.
@@ -69,8 +73,10 @@ class LocationsController extends Notifier<LocationsState> {
 
   void _persist() {
     final prefs = ref.read(sharedPreferencesProvider);
-    prefs.setString(PrefKeys.locations,
-        jsonEncode(state.locations.map((l) => l.toJson()).toList()));
+    prefs.setString(
+      PrefKeys.locations,
+      jsonEncode(state.locations.map((l) => l.toJson()).toList()),
+    );
     prefs.setString(PrefKeys.activeLocation, state.activeName);
   }
 
@@ -115,13 +121,14 @@ class LocationsController extends Notifier<LocationsState> {
   }
 }
 
-final locationsProvider =
-    NotifierProvider<LocationsController, LocationsState>(
-        LocationsController.new);
+final locationsProvider = NotifierProvider<LocationsController, LocationsState>(
+  LocationsController.new,
+);
 
 /// Aktif konum — çoğu ekranın okuduğu kısayol.
-final activeLocationProvider =
-    Provider<SavedLocation>((ref) => ref.watch(locationsProvider).active);
+final activeLocationProvider = Provider<SavedLocation>(
+  (ref) => ref.watch(locationsProvider).active,
+);
 
 /// Bir konum + gün için tam solunar sonucu: efemeris + skor.
 class DayResult {
@@ -141,33 +148,41 @@ class DayResult {
 /// Konum + yerel takvim günü anahtarıyla solunar sonucu hesaplar. Saf, offline,
 /// senkron. Takvim/Gün Detayı ekranları bugünden farklı günler için bunu kullanır.
 final solunarForDateProvider =
-    Provider.family<DayResult, ({SavedLocation location, DateTime localDate})>(
-        (ref, key) {
-  final eph = ref.watch(ephemerisSourceProvider);
-  final engine = ref.watch(solunarEngineProvider);
+    Provider.family<DayResult, ({SavedLocation location, DateTime localDate})>((
+      ref,
+      key,
+    ) {
+      final eph = ref.watch(ephemerisSourceProvider);
+      final engine = ref.watch(solunarEngineProvider);
 
-  // O günün gerçek ofseti IANA tz'den çözülür — DST dahil (T2 önlemi).
-  final offset =
-      AppTimeZone.offsetForLocalDate(key.location.timeZoneId, key.localDate);
+      // O günün gerçek ofseti IANA tz'den çözülür — DST dahil (T2 önlemi).
+      final offset = AppTimeZone.offsetForLocalDate(
+        key.location.timeZoneId,
+        key.localDate,
+      );
 
-  final ephemeris = eph.computeDay(
-    year: key.localDate.year,
-    month: key.localDate.month,
-    day: key.localDate.day,
-    position: GeoPosition(
-      latitude: key.location.latitude,
-      longitude: key.location.longitude,
-    ),
-    utcOffset: offset,
-  );
+      final ephemeris = eph.computeDay(
+        year: key.localDate.year,
+        month: key.localDate.month,
+        day: key.localDate.day,
+        position: GeoPosition(
+          latitude: key.location.latitude,
+          longitude: key.location.longitude,
+        ),
+        utcOffset: offset,
+      );
 
-  return DayResult(
-    location: key.location,
-    localDate: DateTime(key.localDate.year, key.localDate.month, key.localDate.day),
-    ephemeris: ephemeris,
-    solunar: engine.evaluate(ephemeris),
-  );
-});
+      return DayResult(
+        location: key.location,
+        localDate: DateTime(
+          key.localDate.year,
+          key.localDate.month,
+          key.localDate.day,
+        ),
+        ephemeris: ephemeris,
+        solunar: engine.evaluate(ephemeris),
+      );
+    });
 
 /// Aktif konumun *bugünkü* yerel takvim günü (IANA tz'ye göre).
 DateTime localToday(SavedLocation location) {
@@ -180,6 +195,9 @@ DateTime localToday(SavedLocation location) {
 final todayResultProvider = Provider<DayResult>((ref) {
   final location = ref.watch(activeLocationProvider);
   return ref.watch(
-    solunarForDateProvider((location: location, localDate: localToday(location))),
+    solunarForDateProvider((
+      location: location,
+      localDate: localToday(location),
+    )),
   );
 });

@@ -1,11 +1,13 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/localization.dart';
 import '../../app/theme.dart';
 import '../../core/core.dart';
 import '../day_detail/period_presentation.dart';
 import '../settings/settings_providers.dart';
-import '../shared/location_switcher_sheet.dart';
 import '../weather/weather_providers.dart';
 import 'today_format.dart';
 import 'today_providers.dart';
@@ -35,16 +37,20 @@ class _TodayViewState extends ConsumerState<TodayView> {
   @override
   Widget build(BuildContext context) {
     final result = ref.watch(todayScoredProvider);
-    final fmt = TodayFormat(result.ephemeris.utcOffset,
-        use24h: ref.watch(use24hProvider));
+    final fmt = TodayFormat(
+      result.ephemeris.utcOffset,
+      use24h: ref.watch(use24hProvider),
+      turkish: context.isTurkish,
+    );
 
     return SafeArea(
+      top: false,
       child: RefreshIndicator(
         onRefresh: _onRefresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
-            Reveal(child: _Header(result: result)),
+            Reveal(child: _TodayDateHeader(result: result)),
             const SizedBox(height: 16),
             Reveal(
               delay: const Duration(milliseconds: 60),
@@ -81,37 +87,22 @@ Color _ratingColor(BuildContext context, int rating) {
   return scheme.outline;
 }
 
-class _Header extends ConsumerWidget {
-  const _Header({required this.result});
+class _TodayDateHeader extends StatelessWidget {
+  const _TodayDateHeader({required this.result});
   final DayResult result;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
-      children: [
-        InkWell(
-          borderRadius: BorderRadius.circular(6),
-          onTap: () => showLocationSwitcher(context, ref),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.location_on, size: 18, color: scheme.tertiary),
-                const SizedBox(width: 6),
-                Text(result.location.name,
-                    style: Theme.of(context).textTheme.titleMedium),
-                Icon(Icons.expand_more, size: 20, color: scheme.onSurfaceVariant),
-              ],
-            ),
-          ),
-        ),
-        Text(
-          TodayFormat.longDate(result.localDate).toUpperCase(),
-          style: SoluTheme.labelCaps(context),
-        ),
-      ],
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(
+        TodayFormat.longDate(
+          result.localDate,
+          turkish: context.isTurkish,
+        ).toUpperCase(),
+        textAlign: TextAlign.center,
+        style: SoluTheme.labelCaps(context),
+      ),
     );
   }
 }
@@ -124,62 +115,235 @@ class _ConditionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+    final isLight = Theme.of(context).brightness == Brightness.light;
     final solunar = result.solunar;
     final statusColor = _ratingColor(context, solunar.fishRating);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-        child: Column(
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            scheme.primaryContainer.withValues(alpha: 0.96),
+            scheme.surfaceContainer,
+            scheme.surfaceContainerLow,
+          ],
+        ),
+        border: Border.all(color: statusColor.withValues(alpha: 0.32)),
+        boxShadow: [
+          BoxShadow(
+            color: statusColor.withValues(alpha: 0.12),
+            blurRadius: 24,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
           children: [
-            Text('FISHING CONDITION', style: SoluTheme.labelCaps(context)),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: solunar.fishRating.toDouble()),
-                  duration: const Duration(milliseconds: 700),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, v, _) => Text('${v.round()}',
-                      style: text.displayLarge),
-                ),
-                Text(' / 5',
-                    style: text.headlineMedium
-                        ?.copyWith(color: scheme.onSurfaceVariant)),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              TodayFormat.ratingLabel(solunar.fishRating),
-              style: text.headlineMedium?.copyWith(
-                color: statusColor,
-                fontWeight: FontWeight.w800,
+            Positioned.fill(
+              child: Image.asset(
+                isLight
+                    ? 'assets/images/fishing_condition_light_bg.png'
+                    : 'assets/images/fishing_condition_bg.png',
+                fit: BoxFit.cover,
+                alignment: Alignment.centerRight,
               ),
             ),
-            const SizedBox(height: 14),
-            FishRating(rating: solunar.fishRating, size: 30),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: () => _showFactors(context, solunar),
-              icon: const Icon(Icons.analytics_outlined, size: 18),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: scheme.onSurface,
-                side: BorderSide(color: scheme.outlineVariant),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      scheme.surface.withValues(alpha: isLight ? 0.92 : 0.78),
+                      scheme.surface.withValues(alpha: isLight ? 0.70 : 0.60),
+                      scheme.primaryContainer.withValues(
+                        alpha: isLight ? 0.08 : 0.18,
+                      ),
+                    ],
+                    stops: const [0, 0.50, 1],
+                  ),
                 ),
               ),
-              label: Text('WHY?', style: SoluTheme.labelCaps(context)
-                  .copyWith(color: scheme.onSurface)),
+            ),
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _ConditionBackdropPainter(
+                  accent: statusColor,
+                  rating: solunar.fishRating,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          context.l10n(
+                            'FISHING CONDITION',
+                            'BALIKÇILIK KOŞULU',
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: SoluTheme.labelCaps(context),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'SOLUNAR ${solunar.score}',
+                        style: SoluTheme.dataMono(
+                          context,
+                          size: 11,
+                          color: scheme.onSurfaceVariant,
+                          weight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(
+                          begin: 0,
+                          end: solunar.fishRating.toDouble(),
+                        ),
+                        duration: const Duration(milliseconds: 700),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, v, _) =>
+                            Text('${v.round()}', style: text.displayLarge),
+                      ),
+                      Text(
+                        ' / 5',
+                        style: text.headlineMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    TodayFormat.ratingLabel(
+                      solunar.fishRating,
+                      turkish: context.isTurkish,
+                    ),
+                    style: text.headlineMedium?.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  FishRating(rating: solunar.fishRating, size: 30),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: () => _showFactors(context, solunar),
+                    icon: const Icon(Icons.analytics_outlined, size: 18),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: scheme.onSurface,
+                      side: BorderSide(color: scheme.outlineVariant),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    label: Text(
+                      context.l10n('WHY?', 'NEDEN?'),
+                      style: SoluTheme.labelCaps(
+                        context,
+                      ).copyWith(color: scheme.onSurface),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
     );
   }
+}
+
+/// Skor kartının arka planındaki radar/dalga dokusu. Saf çizim olduğu için
+/// tema rengine ve ekran boyutuna uyum sağlar; ek görsel indirmez.
+class _ConditionBackdropPainter extends CustomPainter {
+  const _ConditionBackdropPainter({required this.accent, required this.rating});
+
+  final Color accent;
+  final int rating;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final glowCenter = Offset(size.width * 0.84, size.height * 0.18);
+    final glowRadius = size.width * 0.52;
+    canvas.drawCircle(
+      glowCenter,
+      glowRadius,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            accent.withValues(alpha: 0.19),
+            accent.withValues(alpha: 0.04),
+            Colors.transparent,
+          ],
+          stops: const [0, 0.48, 1],
+        ).createShader(Rect.fromCircle(center: glowCenter, radius: glowRadius)),
+    );
+
+    final radarPaint = Paint()
+      ..color = accent.withValues(alpha: 0.18)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    for (var i = 1; i <= 3; i++) {
+      canvas.drawCircle(glowCenter, 26.0 * i, radarPaint);
+    }
+    canvas.drawLine(
+      Offset(glowCenter.dx - 82, glowCenter.dy),
+      Offset(size.width + 12, glowCenter.dy),
+      radarPaint,
+    );
+    canvas.drawLine(
+      glowCenter,
+      Offset(size.width + 10, glowCenter.dy + 56),
+      radarPaint,
+    );
+
+    final wavePaint = Paint()
+      ..color = accent.withValues(alpha: 0.11)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4;
+    for (var wave = 0; wave < 3; wave++) {
+      final path = Path();
+      final baseY = size.height - 24 + wave * 9.0;
+      for (var x = 0.0; x <= size.width; x += 8) {
+        final y = baseY + math.sin((x / size.width) * math.pi * 2 + wave) * 3;
+        if (x == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+      }
+      canvas.drawPath(path, wavePaint);
+    }
+
+    final dotPaint = Paint()..color = accent.withValues(alpha: 0.52);
+    for (var i = 0; i < rating; i++) {
+      canvas.drawCircle(Offset(17 + i * 10.0, 16), 1.4, dotPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConditionBackdropPainter old) =>
+      old.accent != accent || old.rating != rating;
 }
 
 void _showFactors(BuildContext context, SolunarDay day) {
@@ -189,26 +353,45 @@ void _showFactors(BuildContext context, SolunarDay day) {
   showModalBottomSheet(
     context: context,
     showDragHandle: true,
-    builder: (context) => Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Why ${day.fishRating}/5?', style: text.headlineMedium),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Text('SCORE ', style: SoluTheme.labelCaps(context)),
-              Text('${day.score}',
-                  style: SoluTheme.dataMono(context, size: 14, color: moss)),
-              Text(' / 100',
+    builder: (sheetContext) => SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n(
+                'Why ${day.fishRating}/5?',
+                'Neden ${day.fishRating}/5?',
+              ),
+              style: text.headlineMedium,
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  context.l10n('SCORE ', 'PUAN '),
+                  style: SoluTheme.labelCaps(context),
+                ),
+                Text(
+                  '${day.score}',
+                  style: SoluTheme.dataMono(context, size: 14, color: moss),
+                ),
+                Text(
+                  ' / 100',
                   style: SoluTheme.dataMono(
-                      context, size: 14, color: scheme.onSurfaceVariant)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...day.factors.map((f) => Padding(
+                    context,
+                    size: 14,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...day.factors.map(
+              (f) => Padding(
                 padding: const EdgeInsets.only(bottom: 14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,11 +399,21 @@ void _showFactors(BuildContext context, SolunarDay day) {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(TodayFormat.factorLabel(f.key),
-                            style: text.bodyMedium),
-                        Text('+${f.contribution.round()}',
-                            style: SoluTheme.dataMono(context,
-                                size: 14, color: moss)),
+                        Text(
+                          TodayFormat.factorLabel(
+                            f.key,
+                            turkish: context.isTurkish,
+                          ),
+                          style: text.bodyMedium,
+                        ),
+                        Text(
+                          '+${f.contribution.round()}',
+                          style: SoluTheme.dataMono(
+                            context,
+                            size: 14,
+                            color: moss,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -235,20 +428,29 @@ void _showFactors(BuildContext context, SolunarDay day) {
                     ),
                   ],
                 ),
-              )),
-          const SizedBox(height: 4),
-          Text('Astronomy is computed on-device, offline.',
-              style: text.labelMedium
-                  ?.copyWith(color: scheme.onSurfaceVariant)),
-        ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              context.l10n(
+                'Astronomy is computed on-device, offline.',
+                'Astronomi cihazda ve çevrimdışı hesaplanır.',
+              ),
+              style: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
       ),
     ),
   );
 }
 
 class _TimelineCard extends StatelessWidget {
-  const _TimelineCard(
-      {required this.result, required this.fmt, required this.now});
+  const _TimelineCard({
+    required this.result,
+    required this.fmt,
+    required this.now,
+  });
   final DayResult result;
   final TodayFormat fmt;
   final DateTime now;
@@ -258,17 +460,21 @@ class _TimelineCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final next = result.solunar.nextPeriodAfter(now);
     return _SectionCard(
-      title: 'ACTIVITY TIMELINE',
+      title: context.l10n('ACTIVITY TIMELINE', 'ETKİNLİK ZAMAN ÇİZELGESİ'),
       trailing: next == null
           ? null
           : InkWell(
               onTap: () => _showPeriodDetail(context, next, fmt),
               child: Text(
-                '${TodayFormat.periodLabel(next.type)} starts ${TodayFormat.countdown(next.start.difference(now))}',
-                style: Theme.of(context)
-                    .textTheme
-                    .labelMedium
-                    ?.copyWith(color: scheme.tertiary),
+                context.isTurkish
+                    ? '${TodayFormat.periodLabel(next.type, turkish: true)} ${TodayFormat.countdown(next.start.difference(now), turkish: true)} başlıyor'
+                    : '${TodayFormat.periodLabel(next.type)} starts ${TodayFormat.countdown(next.start.difference(now))}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(color: scheme.tertiary),
               ),
             ),
       child: PeriodTimeline(
@@ -283,61 +489,91 @@ class _TimelineCard extends StatelessWidget {
   }
 }
 
-void _showPeriodDetail(BuildContext context, SolunarPeriod period, TodayFormat fmt) {
+void _showPeriodDetail(
+  BuildContext context,
+  SolunarPeriod period,
+  TodayFormat fmt,
+) {
   final scheme = Theme.of(context).colorScheme;
   final moss = SoluPalette.of(context).neonMoss;
   final isMajor = period.type == SolunarPeriodType.major;
   final accent = isMajor ? moss : scheme.tertiary;
-  final presentation = PeriodPresentation.of(period, fmt.offset);
+  final presentation = PeriodPresentation.of(
+    period,
+    fmt.offset,
+    turkish: context.isTurkish,
+  );
 
   showModalBottomSheet(
     context: context,
     showDragHandle: true,
-    builder: (context) => Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(presentation.icon, color: accent),
-              const SizedBox(width: 10),
-              Text(presentation.label,
-                  style: Theme.of(context).textTheme.headlineMedium),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${isMajor ? 'MAJOR' : 'MINOR'} · ${fmt.time(period.start)}–${fmt.time(period.end)}',
-            style: SoluTheme.dataMono(context, size: 13, color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: List.generate(
-              5,
-              (i) => Icon(
-                i < presentation.stars ? Icons.star : Icons.star_border,
-                size: 18,
-                color: i < presentation.stars ? accent : scheme.outlineVariant,
-              ),
-            ),
-          ),
-          if (period.overlapsTwilight) ...[
-            const SizedBox(height: 10),
+    builder: (sheetContext) => SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
               children: [
-                Icon(Icons.wb_twilight, size: 16, color: accent),
-                const SizedBox(width: 6),
-                Text('Overlaps dawn/dusk — a prime-time bonus is applied.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: scheme.onSurfaceVariant)),
+                Icon(presentation.icon, color: accent),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    presentation.label,
+                    style: Theme.of(sheetContext).textTheme.headlineMedium,
+                  ),
+                ),
               ],
             ),
+            const SizedBox(height: 8),
+            Text(
+              '${isMajor ? context.l10n('MAJOR', 'ANA') : context.l10n('MINOR', 'İKİNCİL')} · ${fmt.time(period.start)}–${fmt.time(period.end)}',
+              style: SoluTheme.dataMono(
+                sheetContext,
+                size: 13,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: List.generate(
+                5,
+                (i) => Icon(
+                  i < presentation.stars ? Icons.star : Icons.star_border,
+                  size: 18,
+                  color: i < presentation.stars
+                      ? accent
+                      : scheme.outlineVariant,
+                ),
+              ),
+            ),
+            if (period.overlapsTwilight) ...[
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Icon(Icons.wb_twilight, size: 16, color: accent),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      context.l10n(
+                        'Overlaps dawn/dusk — a prime-time bonus is applied.',
+                        'Şafak/alacakaranlıkla çakışıyor — en iyi zaman bonusu uygulanır.',
+                      ),
+                      style: Theme.of(sheetContext).textTheme.bodySmall
+                          ?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     ),
   );
@@ -358,7 +594,9 @@ class _WeatherRow extends ConsumerWidget {
     String temp = '—', wind = '—', pressure = '—';
     Widget? trailing;
     if (weather != null) {
-      final t = imperial ? weather.temperatureC * 9 / 5 + 32 : weather.temperatureC;
+      final t = imperial
+          ? weather.temperatureC * 9 / 5 + 32
+          : weather.temperatureC;
       temp = '${t.round()}°${imperial ? 'F' : 'C'}';
       final w = imperial ? weather.windSpeedKmh / 1.609 : weather.windSpeedKmh;
       wind = '${w.round()} ${imperial ? 'mph' : 'kmh'}';
@@ -368,33 +606,47 @@ class _WeatherRow extends ConsumerWidget {
     }
 
     return _SectionCard(
-      title: 'WEATHER',
+      title: context.l10n('WEATHER', 'HAVA'),
       trailing: loading
           ? SizedBox(
               width: 14,
               height: 14,
               child: CircularProgressIndicator(
-                  strokeWidth: 2, color: scheme.onSurfaceVariant))
+                strokeWidth: 2,
+                color: scheme.onSurfaceVariant,
+              ),
+            )
           : (weather == null && !loading
-              ? Text('offline', style: SoluTheme.labelCaps(context))
-              : null),
+                ? Text(
+                    context.l10n('offline', 'çevrimdışı'),
+                    style: SoluTheme.labelCaps(context),
+                  )
+                : null),
       child: Row(
         children: [
           Expanded(
             child: _WeatherCell(
-                icon: Icons.thermostat, label: 'TEMP', value: temp),
-          ),
-          const _CellDivider(),
-          Expanded(
-            child: _WeatherCell(icon: Icons.air, label: 'WIND', value: wind),
+              icon: Icons.thermostat,
+              label: context.l10n('TEMP', 'SICAKLIK'),
+              value: temp,
+            ),
           ),
           const _CellDivider(),
           Expanded(
             child: _WeatherCell(
-                icon: Icons.speed,
-                label: 'PRESSURE',
-                value: pressure,
-                trailing: trailing),
+              icon: Icons.air,
+              label: context.l10n('WIND', 'RÜZGÂR'),
+              value: wind,
+            ),
+          ),
+          const _CellDivider(),
+          Expanded(
+            child: _WeatherCell(
+              icon: Icons.speed,
+              label: context.l10n('PRESSURE', 'BASINÇ'),
+              value: pressure,
+              trailing: trailing,
+            ),
           ),
         ],
       ),
@@ -433,11 +685,12 @@ class _PressureArrow extends StatelessWidget {
 }
 
 class _WeatherCell extends StatelessWidget {
-  const _WeatherCell(
-      {required this.icon,
-      required this.label,
-      required this.value,
-      this.trailing});
+  const _WeatherCell({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.trailing,
+  });
   final IconData icon;
   final String label;
   final String value;
@@ -453,7 +706,14 @@ class _WeatherCell extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(value, style: SoluTheme.dataMono(context, size: 15)),
+            Flexible(
+              child: Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: SoluTheme.dataMono(context, size: 15),
+              ),
+            ),
             if (trailing != null) ...[const SizedBox(width: 2), trailing!],
           ],
         ),
@@ -468,10 +728,10 @@ class _CellDivider extends StatelessWidget {
   const _CellDivider();
   @override
   Widget build(BuildContext context) => Container(
-        width: 1,
-        height: 40,
-        color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
-      );
+    width: 1,
+    height: 40,
+    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+  );
 }
 
 class _SolunarCard extends StatelessWidget {
@@ -484,7 +744,7 @@ class _SolunarCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final e = result.ephemeris;
     return _SectionCard(
-      title: 'SOLUNAR DATA',
+      title: context.l10n('SOLUNAR DATA', 'SOLUNAR VERİLERİ'),
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -492,15 +752,17 @@ class _SolunarCard extends StatelessWidget {
             Expanded(
               child: Row(
                 children: [
-                  Icon(Icons.wb_sunny_outlined,
-                      color: scheme.tertiary, size: 28),
+                  Icon(
+                    Icons.wb_sunny_outlined,
+                    color: scheme.tertiary,
+                    size: 28,
+                  ),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _SunRow(
-                          up: true, time: fmt.time(e.sunrise)),
+                      _SunRow(up: true, time: fmt.time(e.sunrise)),
                       const SizedBox(height: 4),
                       _SunRow(up: false, time: fmt.time(e.sunset)),
                     ],
@@ -524,11 +786,20 @@ class _SolunarCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(TodayFormat.moonPhaseLabel(e.moonPhase),
-                            style: Theme.of(context).textTheme.titleSmall),
+                        Text(
+                          TodayFormat.moonPhaseLabel(
+                            e.moonPhase,
+                            turkish: context.isTurkish,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
                         const SizedBox(height: 2),
-                        Text('${(e.moonIllumination * 100).round()}% ILLUM',
-                            style: SoluTheme.labelCaps(context)),
+                        Text(
+                          '${(e.moonIllumination * 100).round()}% ${context.l10n('ILLUM', 'AYDINLIK')}',
+                          style: SoluTheme.labelCaps(context),
+                        ),
                       ],
                     ),
                   ),
@@ -553,8 +824,11 @@ class _SunRow extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(up ? Icons.north_east : Icons.south_east,
-            size: 14, color: scheme.onSurfaceVariant),
+        Icon(
+          up ? Icons.north_east : Icons.south_east,
+          size: 14,
+          color: scheme.onSurfaceVariant,
+        ),
         const SizedBox(width: 4),
         Text(time, style: SoluTheme.dataMono(context, size: 14)),
       ],
@@ -563,8 +837,7 @@ class _SunRow extends StatelessWidget {
 }
 
 class _SectionCard extends StatelessWidget {
-  const _SectionCard(
-      {required this.title, required this.child, this.trailing});
+  const _SectionCard({required this.title, required this.child, this.trailing});
   final String title;
   final Widget child;
   final Widget? trailing;
@@ -580,8 +853,23 @@ class _SectionCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(title, style: SoluTheme.labelCaps(context)),
-                ?trailing,
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: SoluTheme.labelCaps(context),
+                  ),
+                ),
+                if (trailing != null) ...[
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: trailing!,
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 12),

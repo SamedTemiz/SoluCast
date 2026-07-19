@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/localization.dart';
 import '../../data/notifications/notification_plan.dart';
 import '../../data/notifications/notification_service.dart';
 import '../../data/timezone/app_timezone.dart';
@@ -8,8 +9,9 @@ import '../today/today_format.dart';
 import '../today/today_providers.dart';
 
 /// Testlerde/web'de [NoopNotificationScheduler] ile override edilebilir.
-final notificationServiceProvider =
-    Provider<NotificationScheduler>((ref) => NotificationService());
+final notificationServiceProvider = Provider<NotificationScheduler>(
+  (ref) => NotificationService(),
+);
 
 /// Önümüzdeki [days] gün için gerçek skorlardan bildirim planı üretir.
 /// Astronomi offline hesaplandığı için plan ağ olmadan da doğrudur.
@@ -20,8 +22,9 @@ List<NotifiableDay> buildNotifiableDays(Ref ref, {int days = 7}) {
 
   return List.generate(days, (i) {
     final date = today.add(Duration(days: i));
-    final result =
-        ref.watch(solunarForDateProvider((location: location, localDate: date)));
+    final result = ref.watch(
+      solunarForDateProvider((location: location, localDate: date)),
+    );
     final fmt = TodayFormat(result.ephemeris.utcOffset, use24h: use24h);
     final majors = result.solunar.majorPeriods;
     return NotifiableDay(
@@ -38,6 +41,7 @@ List<NotifiableDay> buildNotifiableDays(Ref ref, {int days = 7}) {
 /// hesaplanır → [notificationSchedulerProvider] onu cihaza yazar.
 final notificationPlanProvider = Provider<List<PlannedNotification>>((ref) {
   final prefs = ref.watch(notificationSettingsProvider);
+  final language = ref.watch(languagePreferenceProvider);
   final location = ref.watch(activeLocationProvider);
 
   // Plan zamanları konumun yerel duvar saatinde; "şimdi"yi de aynı tz'de al —
@@ -46,10 +50,16 @@ final notificationPlanProvider = Provider<List<PlannedNotification>>((ref) {
 
   return planNotifications(
     days: buildNotifiableDays(ref),
-    nowLocal: DateTime(nowLocal.year, nowLocal.month, nowLocal.day,
-        nowLocal.hour, nowLocal.minute),
+    nowLocal: DateTime(
+      nowLocal.year,
+      nowLocal.month,
+      nowLocal.day,
+      nowLocal.hour,
+      nowLocal.minute,
+    ),
     dailySummaryEnabled: prefs.dailySummary,
     highScoreAlertEnabled: prefs.highScoreAlert,
+    turkish: language == AppLanguage.turkish,
   );
 });
 

@@ -9,3 +9,12 @@ abstract interface class WeatherRepository {
   /// Hiç veri yoksa `null` — uygulama yalnız astronomiyle çalışmaya devam eder (F3.4).
   Future<WeatherData?> fetchCurrent(SavedLocation location);
 }
+
+/// Optional capability kept separate so lightweight test repositories only
+/// need to implement current conditions.
+abstract interface class HourlyWeatherRepository {
+  Future<List<HourlyWeatherData>> fetchHourly(
+    SavedLocation location,
+    DateTime localDate,
+  );
+}

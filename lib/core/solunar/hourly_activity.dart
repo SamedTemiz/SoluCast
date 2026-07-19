@@ -10,10 +10,7 @@ import 'solunar_period.dart';
 ///
 /// [sampleCount] örnek sayısı (varsayılan 25 → 0,1..24 saat, grafik ekseniyle
 /// hizalı). [localDate] + [offset] periyot zamanlarını yerel güne bucketler.
-List<double> hourlyActivityCurve(
-  SolunarDay day, {
-  int sampleCount = 25,
-}) {
+List<double> hourlyActivityCurve(SolunarDay day, {int sampleCount = 25}) {
   final samples = List<double>.filled(sampleCount, 0.0);
   const baseline = 0.08;
 

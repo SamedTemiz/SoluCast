@@ -44,8 +44,7 @@ class AstronomiaEphemeris implements EphemerisSource {
     required Duration utcOffset,
   }) {
     // Yerel gün penceresi → UTC. Yerel gece yarısı UTC = utc(midnight) - offset.
-    final localMidnightUtc =
-        DateTime.utc(year, month, day).subtract(utcOffset);
+    final localMidnightUtc = DateTime.utc(year, month, day).subtract(utcOffset);
     final windowStartJd = _jdFromUtc(localMidnightUtc);
     final windowEndJd = windowStartJd + 1.0; // 24 saat
 
@@ -59,17 +58,47 @@ class AstronomiaEphemeris implements EphemerisSource {
     }
 
     final sunrises = _findAltitudeCrossings(
-        sunAlt, windowStartJd, windowEndJd, _h0Sun, rising: true);
+      sunAlt,
+      windowStartJd,
+      windowEndJd,
+      _h0Sun,
+      rising: true,
+    );
     final sunsets = _findAltitudeCrossings(
-        sunAlt, windowStartJd, windowEndJd, _h0Sun, rising: false);
+      sunAlt,
+      windowStartJd,
+      windowEndJd,
+      _h0Sun,
+      rising: false,
+    );
     final civilDawns = _findAltitudeCrossings(
-        sunAlt, windowStartJd, windowEndJd, _h0Civil, rising: true);
+      sunAlt,
+      windowStartJd,
+      windowEndJd,
+      _h0Civil,
+      rising: true,
+    );
     final civilDusks = _findAltitudeCrossings(
-        sunAlt, windowStartJd, windowEndJd, _h0Civil, rising: false);
+      sunAlt,
+      windowStartJd,
+      windowEndJd,
+      _h0Civil,
+      rising: false,
+    );
     final astroDawns = _findAltitudeCrossings(
-        sunAlt, windowStartJd, windowEndJd, _h0Astro, rising: true);
+      sunAlt,
+      windowStartJd,
+      windowEndJd,
+      _h0Astro,
+      rising: true,
+    );
     final astroDusks = _findAltitudeCrossings(
-        sunAlt, windowStartJd, windowEndJd, _h0Astro, rising: false);
+      sunAlt,
+      windowStartJd,
+      windowEndJd,
+      _h0Astro,
+      rising: false,
+    );
 
     double sunHourAngle(double jdUt) {
       final eq = solar.apparentEquatorial(_jde(jdUt));
@@ -77,7 +106,11 @@ class AstronomiaEphemeris implements EphemerisSource {
     }
 
     final solarNoons = _findMeridianCrossings(
-        sunHourAngle, windowStartJd, windowEndJd, upper: true);
+      sunHourAngle,
+      windowStartJd,
+      windowEndJd,
+      upper: true,
+    );
 
     // --- Ay olayları ---
     double moonAlt(double jdUt) {
@@ -93,9 +126,19 @@ class AstronomiaEphemeris implements EphemerisSource {
     }
 
     final moonrises = _findAltitudeCrossingsDynamic(
-        moonAlt, moonH0, windowStartJd, windowEndJd, rising: true);
+      moonAlt,
+      moonH0,
+      windowStartJd,
+      windowEndJd,
+      rising: true,
+    );
     final moonsets = _findAltitudeCrossingsDynamic(
-        moonAlt, moonH0, windowStartJd, windowEndJd, rising: false);
+      moonAlt,
+      moonH0,
+      windowStartJd,
+      windowEndJd,
+      rising: false,
+    );
 
     double moonHourAngle(double jdUt) {
       final eq = _moonEquatorial(_jde(jdUt));
@@ -103,9 +146,17 @@ class AstronomiaEphemeris implements EphemerisSource {
     }
 
     final moonUpperTransits = _findMeridianCrossings(
-        moonHourAngle, windowStartJd, windowEndJd, upper: true);
+      moonHourAngle,
+      windowStartJd,
+      windowEndJd,
+      upper: true,
+    );
     final moonLowerTransits = _findMeridianCrossings(
-        moonHourAngle, windowStartJd, windowEndJd, upper: false);
+      moonHourAngle,
+      windowStartJd,
+      windowEndJd,
+      upper: false,
+    );
 
     // --- Ay fazı / aydınlanma (yerel öğlen anında) ---
     final noonUtc = localMidnightUtc.add(const Duration(hours: 12));
@@ -158,12 +209,19 @@ class AstronomiaEphemeris implements EphemerisSource {
 
   /// Verilen UT anında bir cismin ufuk yüksekliği (radyan).
   double _altitude(
-      double ra, double dec, double jdUt, double latRad, double lonEastRad) {
+    double ra,
+    double dec,
+    double jdUt,
+    double latRad,
+    double lonEastRad,
+  ) {
     final gast = sidereal.apparent(jdUt) * (_twoPi / 86400.0); // radyan
     final lst = gast + lonEastRad; // doğu-pozitif yerel yıldız zamanı
     final h = lst - ra; // saat açısı
-    return math.asin(math.sin(latRad) * math.sin(dec) +
-        math.cos(latRad) * math.cos(dec) * math.cos(h));
+    return math.asin(
+      math.sin(latRad) * math.sin(dec) +
+          math.cos(latRad) * math.cos(dec) * math.cos(h),
+    );
   }
 
   /// Cismin saat açısı [-π, π] (0 = üst meridyen, ±π = alt meridyen).
@@ -182,9 +240,9 @@ class AstronomiaEphemeris implements EphemerisSource {
     // basit ama apparentEquatorial elimizde; boylamı yaklaşık türet:
     final eps = nutation.meanObliquity(jde);
     final sunLon = math.atan2(
-        math.sin(sunEq.ra) * math.cos(eps) +
-            math.tan(sunEq.dec) * math.sin(eps),
-        math.cos(sunEq.ra));
+      math.sin(sunEq.ra) * math.cos(eps) + math.tan(sunEq.dec) * math.sin(eps),
+      math.cos(sunEq.ra),
+    );
     final elong = _wrap2pi(moon.lon - sunLon);
     return elong / _twoPi;
   }
@@ -202,7 +260,12 @@ class AstronomiaEphemeris implements EphemerisSource {
     required bool rising,
   }) {
     return _findAltitudeCrossingsDynamic(
-        altFn, (_) => targetAlt, startJd, endJd, rising: rising);
+      altFn,
+      (_) => targetAlt,
+      startJd,
+      endJd,
+      rising: rising,
+    );
   }
 
   /// Hedef yüksekliği ana göre değişen (ay, paralaks) ufuk geçişleri.
@@ -225,7 +288,11 @@ class AstronomiaEphemeris implements EphemerisSource {
       final crosses = rising ? (prevF < 0 && f >= 0) : (prevF > 0 && f <= 0);
       if (crosses) {
         final root = _bisect(
-            (x) => altFn(x) - targetFn(x), prevJd, t, prevF < 0);
+          (x) => altFn(x) - targetFn(x),
+          prevJd,
+          t,
+          prevF < 0,
+        );
         results.add(_utcFromJd(root));
       }
       prevJd = t;
@@ -255,7 +322,11 @@ class AstronomiaEphemeris implements EphemerisSource {
       final signChange = (prevD < 0 && d >= 0) || (prevD > 0 && d <= 0);
       if (signChange && (prevD - d).abs() < math.pi) {
         final root = _bisect(
-            (x) => _angleDiff(haFn(x), target), prevJd, t, prevD < 0);
+          (x) => _angleDiff(haFn(x), target),
+          prevJd,
+          t,
+          prevD < 0,
+        );
         results.add(_utcFromJd(root));
       }
       prevJd = t;
@@ -266,7 +337,12 @@ class AstronomiaEphemeris implements EphemerisSource {
 
   /// [a] ile [b] arasında f'in kökünü bisection ile bulur (~0.1 sn hassasiyet).
   /// [risingSign] true → f(a)<0<f(b) beklenir.
-  double _bisect(double Function(double) f, double a, double b, bool risingSign) {
+  double _bisect(
+    double Function(double) f,
+    double a,
+    double b,
+    bool risingSign,
+  ) {
     double lo = a, hi = b;
     // ~1e-6 gün ≈ 0.09 sn → 40 iterasyon fazlasıyla yeterli.
     for (int i = 0; i < 40; i++) {
@@ -291,9 +367,9 @@ class AstronomiaEphemeris implements EphemerisSource {
       utc.millisecondsSinceEpoch / 86400000.0 + _jdUnixEpoch;
 
   DateTime _utcFromJd(double jd) => DateTime.fromMillisecondsSinceEpoch(
-        ((jd - _jdUnixEpoch) * 86400000.0).round(),
-        isUtc: true,
-      );
+    ((jd - _jdUnixEpoch) * 86400000.0).round(),
+    isUtc: true,
+  );
 
   int _jdToCalendarYear(double jd) => _utcFromJd(jd).year;
 

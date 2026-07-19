@@ -1,18 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:solucast/data/notifications/notification_plan.dart';
+import 'package:angler_pulse/data/notifications/notification_plan.dart';
 
 void main() {
   final today = DateTime(2026, 7, 16);
   final nowLocal = DateTime(2026, 7, 16, 9, 0); // bugün 09:00
 
   List<NotifiableDay> days({List<int> ratings = const [3, 5, 2]}) => [
-        for (var i = 0; i < ratings.length; i++)
-          NotifiableDay(
-            localDate: today.add(Duration(days: i)),
-            fishRating: ratings[i],
-            firstMajorWindow: '06:40–08:40',
-          ),
-      ];
+    for (var i = 0; i < ratings.length; i++)
+      NotifiableDay(
+        localDate: today.add(Duration(days: i)),
+        fishRating: ratings[i],
+        firstMajorWindow: '06:40–08:40',
+      ),
+  ];
 
   test('günlük özet her gün seçilen saatte planlanır', () {
     final plan = planNotifications(
@@ -22,8 +22,9 @@ void main() {
       highScoreAlertEnabled: false,
       summaryHour: 7,
     );
-    final summaries =
-        plan.where((p) => p.kind == PlannedKind.dailySummary).toList();
+    final summaries = plan
+        .where((p) => p.kind == PlannedKind.dailySummary)
+        .toList();
     // Bugünün 07:00'ı geçmiş (now=09:00) → atlanır; yarın + öbür gün kalır.
     expect(summaries, hasLength(2));
     expect(summaries.first.scheduledLocal, DateTime(2026, 7, 17, 7));
@@ -75,25 +76,32 @@ void main() {
     expect(plan, isEmpty);
   });
 
-  test('id\'ler stabil ve türler arası çakışmaz (yeniden planlama güvenli)', () {
-    final plan = planNotifications(
-      days: days(ratings: [5, 5]),
-      nowLocal: nowLocal,
-      dailySummaryEnabled: true,
-      highScoreAlertEnabled: true,
-    );
-    final ids = plan.map((p) => p.id).toList();
-    expect(ids.toSet().length, ids.length, reason: 'id\'ler benzersiz olmalı');
+  test(
+    'id\'ler stabil ve türler arası çakışmaz (yeniden planlama güvenli)',
+    () {
+      final plan = planNotifications(
+        days: days(ratings: [5, 5]),
+        nowLocal: nowLocal,
+        dailySummaryEnabled: true,
+        highScoreAlertEnabled: true,
+      );
+      final ids = plan.map((p) => p.id).toList();
+      expect(
+        ids.toSet().length,
+        ids.length,
+        reason: 'id\'ler benzersiz olmalı',
+      );
 
-    // Aynı girdiyle tekrar planla → aynı id'ler (replace, duplicate değil).
-    final again = planNotifications(
-      days: days(ratings: [5, 5]),
-      nowLocal: nowLocal,
-      dailySummaryEnabled: true,
-      highScoreAlertEnabled: true,
-    );
-    expect(again.map((p) => p.id).toList(), ids);
-  });
+      // Aynı girdiyle tekrar planla → aynı id'ler (replace, duplicate değil).
+      final again = planNotifications(
+        days: days(ratings: [5, 5]),
+        nowLocal: nowLocal,
+        dailySummaryEnabled: true,
+        highScoreAlertEnabled: true,
+      );
+      expect(again.map((p) => p.id).toList(), ids);
+    },
+  );
 
   test('sonuç zamana göre sıralı döner', () {
     final plan = planNotifications(
@@ -115,7 +123,9 @@ void main() {
     final plan = planNotifications(
       days: [
         NotifiableDay(
-            localDate: today.add(const Duration(days: 1)), fishRating: 3),
+          localDate: today.add(const Duration(days: 1)),
+          fishRating: 3,
+        ),
       ],
       nowLocal: nowLocal,
       dailySummaryEnabled: true,

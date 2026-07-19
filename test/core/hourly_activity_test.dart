@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:solucast/core/core.dart';
+import 'package:angler_pulse/core/core.dart';
 
 void main() {
   const engine = SolunarEngine();
@@ -30,7 +30,9 @@ void main() {
   }
 
   test('eğri 25 örnek döner ve [0,1] aralığında kalır', () {
-    final day = engine.evaluate(eph(upperTransits: [DateTime.utc(2026, 6, 21, 12)]));
+    final day = engine.evaluate(
+      eph(upperTransits: [DateTime.utc(2026, 6, 21, 12)]),
+    );
     final curve = hourlyActivityCurve(day);
     expect(curve, hasLength(25));
     for (final v in curve) {

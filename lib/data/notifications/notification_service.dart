@@ -14,6 +14,14 @@ abstract interface class NotificationScheduler {
     required List<PlannedNotification> plan,
     required String timeZoneId,
   });
+  Future<bool> schedulePeriodReminder({
+    required int id,
+    required DateTime periodStartUtc,
+    required String timeZoneId,
+    required String title,
+    required String body,
+    Duration leadTime = const Duration(minutes: 15),
+  });
   Future<void> cancelAll();
 }
 
@@ -31,6 +39,15 @@ class NoopNotificationScheduler implements NotificationScheduler {
     required String timeZoneId,
   }) async {}
   @override
+  Future<bool> schedulePeriodReminder({
+    required int id,
+    required DateTime periodStartUtc,
+    required String timeZoneId,
+    required String title,
+    required String body,
+    Duration leadTime = const Duration(minutes: 15),
+  }) async => false;
+  @override
   Future<void> cancelAll() async {}
 }
 
@@ -45,7 +62,7 @@ class NoopNotificationScheduler implements NotificationScheduler {
 /// çökertmez, sessizce yutulur (uygulama bildirimsiz çalışmaya devam eder).
 class NotificationService implements NotificationScheduler {
   NotificationService({FlutterLocalNotificationsPlugin? plugin})
-      : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   final FlutterLocalNotificationsPlugin _plugin;
   bool _initialized = false;
@@ -71,18 +88,18 @@ class NotificationService implements NotificationScheduler {
     }
   }
 
-  /// Android 13+ bildirim izni + tam alarm izni. Kullanıcı reddederse
-  /// uygulama çalışmaya devam eder (bildirim yok).
+  /// Android 13+ bildirim izni. Tam alarm durumu, bir bildirim kurulurken
+  /// denetlenir; uygulama açılır açılmaz sistem ayarlarına yönlendirilmez.
   @override
   Future<bool> requestPermissions() async {
     if (kIsWeb) return false;
     try {
-      final android = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (android == null) return false;
       final granted = await android.requestNotificationsPermission() ?? false;
-      // Tam alarm izni (Android 14+): reddedilirse inexact'e düşeriz.
-      await android.requestExactAlarmsPermission();
       return granted;
     } catch (e) {
       debugPrint('NotificationService.requestPermissions atlandı: $e');
@@ -101,11 +118,15 @@ class NotificationService implements NotificationScheduler {
     try {
       await initialize();
       if (!_initialized) return; // platform yok → sessizce çık
-      await _plugin.cancelAll();
+      for (final id in managedForecastNotificationIds()) {
+        await _plugin.cancel(id: id);
+      }
       if (plan.isEmpty) return;
 
-      final android = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       final exactAllowed =
           await android?.canScheduleExactNotifications() ?? false;
       final mode = exactAllowed
@@ -146,6 +167,61 @@ class NotificationService implements NotificationScheduler {
       }
     } catch (e) {
       debugPrint('NotificationService.reschedule atlandı: $e');
+    }
+  }
+
+  @override
+  Future<bool> schedulePeriodReminder({
+    required int id,
+    required DateTime periodStartUtc,
+    required String timeZoneId,
+    required String title,
+    required String body,
+    Duration leadTime = const Duration(minutes: 15),
+  }) async {
+    if (kIsWeb) return false;
+    try {
+      await initialize();
+      if (!_initialized) return false;
+
+      final location = tz.getLocation(timeZoneId);
+      final when = tz.TZDateTime.from(
+        periodStartUtc.toUtc(),
+        location,
+      ).subtract(leadTime);
+      if (!when.isAfter(tz.TZDateTime.now(location))) return false;
+
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      final exactAllowed =
+          await android?.canScheduleExactNotifications() ?? false;
+      final mode = exactAllowed
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle;
+
+      await _plugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: when,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'solunar_periods',
+            'Period reminders',
+            channelDescription: 'Reminders before selected solunar periods',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+        ),
+        androidScheduleMode: mode,
+        payload: 'period-reminder',
+      );
+      return true;
+    } catch (e) {
+      debugPrint('NotificationService.schedulePeriodReminder skipped: $e');
+      return false;
     }
   }
 
