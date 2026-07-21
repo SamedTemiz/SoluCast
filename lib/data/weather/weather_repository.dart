@@ -10,6 +10,16 @@ abstract interface class WeatherRepository {
   Future<WeatherData?> fetchCurrent(SavedLocation location);
 }
 
+/// Optional capability for an explicit user-initiated refresh. Keeping this
+/// separate preserves lightweight repositories and tests that only implement
+/// the offline-friendly base contract.
+abstract interface class RefreshableWeatherRepository {
+  /// Returns true only when a fresh network response was stored. A false
+  /// result means callers should keep rendering their existing cache instead
+  /// of invalidating it and immediately making the same request again.
+  Future<bool> refreshCurrent(SavedLocation location);
+}
+
 /// Optional capability kept separate so lightweight test repositories only
 /// need to implement current conditions.
 abstract interface class HourlyWeatherRepository {

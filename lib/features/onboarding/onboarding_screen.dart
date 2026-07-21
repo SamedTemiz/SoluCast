@@ -113,6 +113,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     body:
                         'Solunar periods, moon phases and sunrise windows — '
                         'computed on your device, anywhere, even offline.',
+                    badge: 'WORKS OFFLINE',
                     cta: 'Get started',
                     onCta: _next,
                   ),
@@ -177,6 +178,7 @@ class _OnboardPage extends StatelessWidget {
     required this.body,
     required this.cta,
     required this.onCta,
+    this.badge,
     this.skipLabel,
     this.onSkip,
   });
@@ -186,6 +188,7 @@ class _OnboardPage extends StatelessWidget {
   final String body;
   final String cta;
   final VoidCallback onCta;
+  final String? badge;
   final String? skipLabel;
   final VoidCallback? onSkip;
 
@@ -211,6 +214,38 @@ class _OnboardPage extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: text.headlineLarge,
               ),
+              if (badge != null) ...[
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.center,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: moss.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: moss.withValues(alpha: 0.5)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.cloud_off_outlined, size: 14, color: moss),
+                        const SizedBox(width: 6),
+                        Text(
+                          badge!,
+                          style: text.labelSmall?.copyWith(
+                            color: moss,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Text(
                 body,

@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter/services.dart';
 
 import '../../app/localization.dart';
 import '../../app/theme.dart';
@@ -10,6 +11,7 @@ import '../../data/location/saved_location.dart';
 import '../settings/settings_providers.dart';
 import '../notifications/notification_providers.dart';
 import '../shared/entitlement.dart';
+import '../shared/score_explanation_sheet.dart';
 import '../shared/upgrade_sheet.dart';
 import '../today/today_format.dart';
 import '../today/today_providers.dart';
@@ -65,11 +67,23 @@ class DayDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 48), // geri butonuyla dengelemek için
+                IconButton(
+                  tooltip: context.l10n(
+                    'Copy trip brief',
+                    'Gezi özetini kopyala',
+                  ),
+                  onPressed: () => _copyTripBrief(context, result, fmt),
+                  icon: const Icon(Icons.share_outlined),
+                ),
               ],
             ),
             const SizedBox(height: 8),
-            Reveal(child: _HeroSummaryCard(result: result)),
+            Reveal(
+              child: _HeroSummaryCard(
+                result: result,
+                use24h: ref.watch(use24hProvider),
+              ),
+            ),
             const SizedBox(height: 12),
             Reveal(
               delay: const Duration(milliseconds: 80),
@@ -105,9 +119,43 @@ class DayDetailScreen extends ConsumerWidget {
   }
 }
 
+Future<void> _copyTripBrief(
+  BuildContext context,
+  DayResult result,
+  TodayFormat fmt,
+) async {
+  final firstMajor = result.solunar.majorPeriods.isEmpty
+      ? null
+      : result.solunar.majorPeriods.first;
+  final date = TodayFormat.longDateFull(
+    result.localDate,
+    turkish: context.isTurkish,
+  );
+  final window = firstMajor == null
+      ? context.l10n('No major window available', 'Ana dönem bulunamadı')
+      : '${fmt.time(firstMajor.start)}–${fmt.time(firstMajor.end)}';
+  final label = TodayFormat.ratingLabel(
+    result.solunar.fishRating,
+    turkish: context.isTurkish,
+  );
+  final brief = context.isTurkish
+      ? 'AnglerPulse gezi özeti\n${result.location.name} · $date\nKoşul: $label (${result.solunar.score}/100)\nEn iyi ana dönem: $window'
+      : 'AnglerPulse trip brief\n${result.location.name} · $date\nCondition: $label (${result.solunar.score}/100)\nBest major window: $window';
+  await Clipboard.setData(ClipboardData(text: brief));
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        context.l10n('Trip brief copied.', 'Gezi özeti kopyalandı.'),
+      ),
+    ),
+  );
+}
+
 class _HeroSummaryCard extends StatelessWidget {
-  const _HeroSummaryCard({required this.result});
+  const _HeroSummaryCard({required this.result, required this.use24h});
   final DayResult result;
+  final bool use24h;
 
   @override
   Widget build(BuildContext context) {
@@ -120,64 +168,84 @@ class _HeroSummaryCard extends StatelessWidget {
         ? scheme.tertiary
         : scheme.onSurfaceVariant;
 
-    return Container(
-      decoration: BoxDecoration(
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            scheme.primaryContainer,
-            scheme.primaryContainer.withValues(alpha: 0.4),
-          ],
+        onTap: () => showScoreExplanation(
+          context,
+          day: day,
+          ephemeris: result.ephemeris,
+          use24h: use24h,
         ),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4)),
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                scheme.primaryContainer,
+                scheme.primaryContainer.withValues(alpha: 0.4),
+              ],
+            ),
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: 0.4),
+            ),
+          ),
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '${day.fishRating}',
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                  color: statusColor,
-                  fontSize: 44,
-                ),
-              ),
-              Text(
-                '/5',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  TodayFormat.ratingLabel(
-                    day.fishRating,
-                    turkish: context.isTurkish,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '${day.fishRating}',
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                      color: statusColor,
+                      fontSize: 44,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  Text(
+                    '/5',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      TodayFormat.ratingLabel(
+                        day.fishRating,
+                        turkish: context.isTurkish,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.info_outline, size: 18, color: scheme.onSurfaceVariant),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                buildDaySummary(
+                  day,
+                  result.ephemeris,
+                  turkish: context.isTurkish,
                 ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            buildDaySummary(day, result.ephemeris, turkish: context.isTurkish),
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-          ),
-        ],
+        ),
       ),
     );
   }

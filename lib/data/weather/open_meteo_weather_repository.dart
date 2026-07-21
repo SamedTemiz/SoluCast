@@ -16,7 +16,10 @@ import 'weather_repository.dart';
 ///
 /// [client] test için enjekte edilebilir (gerçek ağ olmadan parse doğrulaması).
 class OpenMeteoWeatherRepository
-    implements WeatherRepository, HourlyWeatherRepository {
+    implements
+        WeatherRepository,
+        RefreshableWeatherRepository,
+        HourlyWeatherRepository {
   OpenMeteoWeatherRepository({
     required this.prefs,
     http.Client? client,
@@ -30,9 +33,26 @@ class OpenMeteoWeatherRepository
   static const _host = 'api.open-meteo.com';
 
   @override
-  Future<WeatherData?> fetchCurrent(SavedLocation location) async {
+  Future<WeatherData?> fetchCurrent(SavedLocation location) =>
+      _fetchCurrent(location, forceRefresh: false);
+
+  @override
+  Future<bool> refreshCurrent(SavedLocation location) async {
+    final result = await _fetchCurrent(location, forceRefresh: true);
+    // `_fetchCurrent` deliberately falls back to stale cache on failure. Only
+    // an item fetched just now proves that the network refresh succeeded.
+    return result != null &&
+        DateTime.now().toUtc().difference(result.fetchedAt) <
+            const Duration(seconds: 5);
+  }
+
+  Future<WeatherData?> _fetchCurrent(
+    SavedLocation location, {
+    required bool forceRefresh,
+  }) async {
     final cached = _readCache(location);
-    if (cached != null &&
+    if (!forceRefresh &&
+        cached != null &&
         DateTime.now().toUtc().difference(cached.fetchedAt) < ttl) {
       return cached; // taze cache → ağ yok
     }

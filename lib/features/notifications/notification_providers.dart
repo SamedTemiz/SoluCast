@@ -5,6 +5,7 @@ import '../../data/notifications/notification_plan.dart';
 import '../../data/notifications/notification_service.dart';
 import '../../data/timezone/app_timezone.dart';
 import '../settings/settings_providers.dart';
+import '../shared/entitlement.dart';
 import '../today/today_format.dart';
 import '../today/today_providers.dart';
 
@@ -30,6 +31,16 @@ List<NotifiableDay> buildNotifiableDays(Ref ref, {int days = 7}) {
     return NotifiableDay(
       localDate: date,
       fishRating: result.solunar.fishRating,
+      majorWindows: [
+        for (final major in majors)
+          NotifiableMajorWindow(
+            startLocal: major.start.add(result.ephemeris.utcOffset),
+            label: '${fmt.time(major.start)}-${fmt.time(major.end)}',
+          ),
+      ],
+      firstMajorStartLocal: majors.isEmpty
+          ? null
+          : majors.first.start.add(result.ephemeris.utcOffset),
       firstMajorWindow: majors.isEmpty
           ? null
           : '${fmt.time(majors.first.start)}–${fmt.time(majors.first.end)}',
@@ -43,6 +54,7 @@ final notificationPlanProvider = Provider<List<PlannedNotification>>((ref) {
   final prefs = ref.watch(notificationSettingsProvider);
   final language = ref.watch(languagePreferenceProvider);
   final location = ref.watch(activeLocationProvider);
+  final smartAlertsAllowed = ref.watch(smartAlertsEntitlementProvider);
 
   // Plan zamanları konumun yerel duvar saatinde; "şimdi"yi de aynı tz'de al —
   // aktif konum başka bir zaman dilimindeyse cihaz saati yanlış olurdu.
@@ -59,6 +71,9 @@ final notificationPlanProvider = Provider<List<PlannedNotification>>((ref) {
     ),
     dailySummaryEnabled: prefs.dailySummary,
     highScoreAlertEnabled: prefs.highScoreAlert,
+    smartAlertEnabled: smartAlertsAllowed && prefs.smartAlert,
+    smartMinRating: prefs.smartMinRating,
+    smartLeadMinutes: prefs.smartLeadMinutes,
     turkish: language == AppLanguage.turkish,
   );
 });
@@ -69,6 +84,10 @@ final notificationSchedulerProvider = Provider<void>((ref) {
   final plan = ref.watch(notificationPlanProvider);
   final location = ref.watch(activeLocationProvider);
   final service = ref.watch(notificationServiceProvider);
-  // Ateşle-unut: UI'ı bloklamaz, hata bildirimleri sessizce yutar.
-  service.reschedule(plan: plan, timeZoneId: location.timeZoneId);
+  // Yan etki build fazında çalışmamalı. Özellikle Pro durumu değiştiğinde
+  // provider grafiği eşzamanlı yeniden hesaplanır; planlamayı bir mikro göreve
+  // bırakmak Riverpod'un "modified during build" korumasını ihlal etmez.
+  Future<void>.microtask(
+    () => service.reschedule(plan: plan, timeZoneId: location.timeZoneId),
+  );
 });

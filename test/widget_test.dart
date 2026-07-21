@@ -73,6 +73,8 @@ void main() {
     await tester.drag(find.byType(ListView).last, const Offset(0, -700));
     await tester.pumpAndSettle();
     expect(find.text('SOLUNAR DATA'), findsOneWidget);
+    // Sahte hava reposu null döner → çevrimdışı → güven bandı görünür.
+    expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
   });
 
   testWidgets('WHY? butonu faktör dökümü sheet\'ini açar', (tester) async {
@@ -81,6 +83,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Why'), findsOneWidget);
     expect(find.text('Moon phase'), findsOneWidget);
+    // Eyleme dönük çıkarım bandı (bu sayfanın yeni değer katmanı).
+    expect(find.byIcon(Icons.tips_and_updates_outlined), findsOneWidget);
   });
 
   testWidgets('Alt navigasyon 4 sekme arasında geçiş yapar', (tester) async {

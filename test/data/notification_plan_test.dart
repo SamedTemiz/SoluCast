@@ -133,4 +133,86 @@ void main() {
     );
     expect(plan.first.body, contains('solunar periods'));
   });
+
+  test('akıllı uyarı eşiğe uyan major dönemden seçilen süre önce gelir', () {
+    final plan = planNotifications(
+      days: [
+        NotifiableDay(
+          localDate: today,
+          fishRating: 5,
+          firstMajorWindow: '11:00–13:00',
+          firstMajorStartLocal: DateTime(2026, 7, 16, 11),
+        ),
+      ],
+      nowLocal: nowLocal,
+      dailySummaryEnabled: false,
+      highScoreAlertEnabled: false,
+      smartAlertEnabled: true,
+      smartMinRating: 4,
+      smartLeadMinutes: 30,
+    );
+
+    expect(plan, hasLength(1));
+    expect(plan.single.kind, PlannedKind.smartWindowAlert);
+    expect(plan.single.scheduledLocal, DateTime(2026, 7, 16, 10, 30));
+  });
+
+  test('akıllı uyarı düşük skoru ve geçmiş pencereleri atlar', () {
+    final plan = planNotifications(
+      days: [
+        NotifiableDay(
+          localDate: today,
+          fishRating: 3,
+          firstMajorStartLocal: DateTime(2026, 7, 16, 11),
+        ),
+        NotifiableDay(
+          localDate: today,
+          fishRating: 5,
+          firstMajorStartLocal: DateTime(2026, 7, 16, 9, 10),
+        ),
+      ],
+      nowLocal: nowLocal,
+      dailySummaryEnabled: false,
+      highScoreAlertEnabled: false,
+      smartAlertEnabled: true,
+      smartMinRating: 4,
+      smartLeadMinutes: 30,
+    );
+
+    expect(plan, isEmpty);
+  });
+
+  test(
+    'akıllı uyarı geçmiş sabahı atlayıp gelecek akşam major penceresini kurar',
+    () {
+      final plan = planNotifications(
+        days: [
+          NotifiableDay(
+            localDate: today,
+            fishRating: 5,
+            majorWindows: [
+              NotifiableMajorWindow(
+                startLocal: DateTime(2026, 7, 16, 8),
+                label: '08:00–10:00',
+              ),
+              NotifiableMajorWindow(
+                startLocal: DateTime(2026, 7, 16, 19),
+                label: '19:00–21:00',
+              ),
+            ],
+          ),
+        ],
+        nowLocal: nowLocal,
+        dailySummaryEnabled: false,
+        highScoreAlertEnabled: false,
+        smartAlertEnabled: true,
+        smartMinRating: 4,
+        smartLeadMinutes: 30,
+      );
+
+      expect(plan, hasLength(1));
+      expect(plan.single.scheduledLocal, DateTime(2026, 7, 16, 18, 30));
+      expect(plan.single.body, contains('19:00–21:00'));
+    },
+  );
 }

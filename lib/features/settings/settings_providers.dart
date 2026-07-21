@@ -89,16 +89,30 @@ final languagePreferenceProvider =
 class NotificationPrefs {
   final bool dailySummary;
   final bool highScoreAlert;
+  final bool smartAlert;
+  final int smartMinRating;
+  final int smartLeadMinutes;
   const NotificationPrefs({
     this.dailySummary = false,
     this.highScoreAlert = false,
+    this.smartAlert = false,
+    this.smartMinRating = 4,
+    this.smartLeadMinutes = 30,
   });
 
-  NotificationPrefs copyWith({bool? dailySummary, bool? highScoreAlert}) =>
-      NotificationPrefs(
-        dailySummary: dailySummary ?? this.dailySummary,
-        highScoreAlert: highScoreAlert ?? this.highScoreAlert,
-      );
+  NotificationPrefs copyWith({
+    bool? dailySummary,
+    bool? highScoreAlert,
+    bool? smartAlert,
+    int? smartMinRating,
+    int? smartLeadMinutes,
+  }) => NotificationPrefs(
+    dailySummary: dailySummary ?? this.dailySummary,
+    highScoreAlert: highScoreAlert ?? this.highScoreAlert,
+    smartAlert: smartAlert ?? this.smartAlert,
+    smartMinRating: smartMinRating ?? this.smartMinRating,
+    smartLeadMinutes: smartLeadMinutes ?? this.smartLeadMinutes,
+  );
 }
 
 class NotificationSettings extends Notifier<NotificationPrefs> {
@@ -108,6 +122,13 @@ class NotificationSettings extends Notifier<NotificationPrefs> {
     return NotificationPrefs(
       dailySummary: prefs.getBool(PrefKeys.notifDailySummary) ?? false,
       highScoreAlert: prefs.getBool(PrefKeys.notifHighScore) ?? false,
+      smartAlert: prefs.getBool(PrefKeys.notifSmartAlert) ?? false,
+      smartMinRating: (prefs.getInt(PrefKeys.notifSmartMinRating) ?? 4).clamp(
+        3,
+        5,
+      ),
+      smartLeadMinutes: (prefs.getInt(PrefKeys.notifSmartLeadMinutes) ?? 30)
+          .clamp(15, 60),
     );
   }
 
@@ -119,6 +140,27 @@ class NotificationSettings extends Notifier<NotificationPrefs> {
   void setHighScoreAlert(bool v) {
     state = state.copyWith(highScoreAlert: v);
     ref.read(sharedPreferencesProvider).setBool(PrefKeys.notifHighScore, v);
+  }
+
+  void setSmartAlert(bool v) {
+    state = state.copyWith(smartAlert: v);
+    ref.read(sharedPreferencesProvider).setBool(PrefKeys.notifSmartAlert, v);
+  }
+
+  void setSmartMinRating(int v) {
+    final value = v.clamp(3, 5);
+    state = state.copyWith(smartMinRating: value);
+    ref
+        .read(sharedPreferencesProvider)
+        .setInt(PrefKeys.notifSmartMinRating, value);
+  }
+
+  void setSmartLeadMinutes(int v) {
+    final value = v.clamp(15, 60);
+    state = state.copyWith(smartLeadMinutes: value);
+    ref
+        .read(sharedPreferencesProvider)
+        .setInt(PrefKeys.notifSmartLeadMinutes, value);
   }
 }
 

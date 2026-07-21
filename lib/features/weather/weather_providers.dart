@@ -27,6 +27,23 @@ final weatherProvider = FutureProvider.family<WeatherData?, SavedLocation>((
   }
 });
 
+/// Requests a real network refresh when the data source supports it, while
+/// retaining stale-cache fallback if the request fails.
+Future<void> refreshWeather(WidgetRef ref, SavedLocation location) async {
+  final repository = ref.read(weatherRepositoryProvider);
+  if (repository is RefreshableWeatherRepository) {
+    final refreshed = await (repository as RefreshableWeatherRepository)
+        .refreshCurrent(location);
+    if (!refreshed) return;
+    // The repository now has a fresh cache entry. Rebuilding providers reads
+    // that cache; it does not perform a second network request.
+    ref.invalidate(weatherProvider(location));
+    ref.invalidate(activeWeatherProvider);
+    return;
+  }
+  ref.invalidate(weatherProvider(location));
+}
+
 /// Aktif konumun havası.
 final activeWeatherProvider = FutureProvider<WeatherData?>((ref) {
   final location = ref.watch(activeLocationProvider);

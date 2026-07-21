@@ -5,6 +5,9 @@ import '../../app/localization.dart';
 import '../../app/theme.dart';
 import '../../core/core.dart';
 import '../../data/location/saved_location.dart';
+import '../../data/prefs/preferences.dart';
+import '../settings/settings_providers.dart';
+import '../shared/score_explanation_sheet.dart';
 import '../shared/widgets/fish_rating.dart';
 import '../today/today_providers.dart';
 import '../weather/weather_providers.dart';
@@ -21,6 +24,17 @@ class SpotCompareScreen extends ConsumerStatefulWidget {
 
 class _SpotCompareScreenState extends ConsumerState<SpotCompareScreen> {
   DateTime? _selectedDate;
+  late TimeOfDay _preferredTime;
+
+  @override
+  void initState() {
+    super.initState();
+    final minutes = ref
+        .read(sharedPreferencesProvider)
+        .getInt(PrefKeys.spotCompareTimeMinutes);
+    final value = (minutes ?? 360).clamp(0, 1439);
+    _preferredTime = TimeOfDay(hour: value ~/ 60, minute: value % 60);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,11 +68,18 @@ class _SpotCompareScreenState extends ConsumerState<SpotCompareScreen> {
               date: selectedDate,
               onTap: () => _pickDate(anchorToday),
             ),
+            const SizedBox(height: 10),
+            _TimePickerCard(time: _preferredTime, onTap: _pickTime),
             const SizedBox(height: 16),
             if (state.locations.length < 2)
               _NeedMoreSpotsCard(onAddSpot: () => Navigator.of(context).pop())
             else ...[
-              _WinnerCard(comparison: comparison),
+              _WinnerCard(
+                comparison: comparison,
+                preferredTime: _preferredTime,
+                onExplain: () =>
+                    _explainSpot(comparison.best!, selectedDate),
+              ),
               const SizedBox(height: 12),
               for (var index = 0; index < comparison.entries.length; index++)
                 Padding(
@@ -67,6 +88,11 @@ class _SpotCompareScreenState extends ConsumerState<SpotCompareScreen> {
                     entry: comparison.entries[index],
                     rank: index + 1,
                     activeName: state.activeName,
+                    preferredTime: _preferredTime,
+                    onExplain: () => _explainSpot(
+                      comparison.entries[index],
+                      selectedDate,
+                    ),
                     onUse: () {
                       ref
                           .read(locationsProvider.notifier)
@@ -102,11 +128,12 @@ class _SpotCompareScreenState extends ConsumerState<SpotCompareScreen> {
     final engine = ref.watch(solunarEngineProvider);
     return SpotComparison.fromDays([
       for (final location in locations)
-        (location: location, day: _dayFor(location, selectedDate, engine)),
+        _comparisonSource(location, selectedDate, engine),
     ]);
   }
 
-  SolunarDay _dayFor(
+  ({SavedLocation location, SolunarDay day, Duration utcOffset})
+  _comparisonSource(
     SavedLocation location,
     DateTime selectedDate,
     SolunarEngine engine,
@@ -117,9 +144,17 @@ class _SpotCompareScreenState extends ConsumerState<SpotCompareScreen> {
     final weather = ref.watch(weatherProvider(location)).asData?.value;
     final hasLiveWeather = _isSameDate(selectedDate, localToday(location));
     if (hasLiveWeather && weather != null) {
-      return engine.evaluate(result.ephemeris, weather: weather.toScoreInput());
+      return (
+        location: location,
+        day: engine.evaluate(result.ephemeris, weather: weather.toScoreInput()),
+        utcOffset: result.ephemeris.utcOffset,
+      );
     }
-    return result.solunar;
+    return (
+      location: location,
+      day: result.solunar,
+      utcOffset: result.ephemeris.utcOffset,
+    );
   }
 
   bool _isSameDate(DateTime a, DateTime b) =>
@@ -137,6 +172,43 @@ class _SpotCompareScreenState extends ConsumerState<SpotCompareScreen> {
       ),
     );
     if (picked != null && mounted) setState(() => _selectedDate = picked);
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _preferredTime,
+      helpText: context.l10n(
+        'When do you plan to fish?',
+        'Ne zaman balık tutacaksınız?',
+      ),
+    );
+    if (picked != null && mounted) {
+      ref
+          .read(sharedPreferencesProvider)
+          .setInt(
+            PrefKeys.spotCompareTimeMinutes,
+            picked.hour * 60 + picked.minute,
+          );
+      setState(() => _preferredTime = picked);
+    }
+  }
+
+  /// Bir noktanın skorunu açıklar. Kartta gösterilen [SolunarDay] doğrudan
+  /// kullanılır (canlı hava varsa dahil); efemeris provider'dan okunur.
+  void _explainSpot(SpotComparisonEntry entry, DateTime selectedDate) {
+    final result = ref.read(
+      solunarForDateProvider((
+        location: entry.location,
+        localDate: selectedDate,
+      )),
+    );
+    showScoreExplanation(
+      context,
+      day: entry.day,
+      ephemeris: result.ephemeris,
+      use24h: ref.read(use24hProvider),
+    );
   }
 }
 
@@ -185,9 +257,63 @@ class _DatePickerCard extends StatelessWidget {
   }
 }
 
+class _TimePickerCard extends StatelessWidget {
+  const _TimePickerCard({required this.time, required this.onTap});
+  final TimeOfDay time;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Icon(Icons.schedule_outlined, color: scheme.tertiary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.l10n(
+                        'PLANNED FISHING TIME',
+                        'PLANLANAN BALIK ZAMANI',
+                      ),
+                      style: SoluTheme.labelCaps(context),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      MaterialLocalizations.of(context).formatTimeOfDay(time),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.edit_outlined, color: scheme.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _WinnerCard extends StatelessWidget {
-  const _WinnerCard({required this.comparison});
+  const _WinnerCard({
+    required this.comparison,
+    required this.preferredTime,
+    required this.onExplain,
+  });
   final SpotComparison comparison;
+  final TimeOfDay preferredTime;
+  final VoidCallback onExplain;
 
   @override
   Widget build(BuildContext context) {
@@ -213,27 +339,39 @@ class _WinnerCard extends StatelessWidget {
             '$lead puan önde — ${_factorLabel(context, advantage.factorKey)} +${advantage.roundedPoints} puan daha güçlü.',
           );
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            moss.withValues(alpha: 0.24),
-            scheme.tertiary.withValues(alpha: 0.13),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: moss.withValues(alpha: 0.65)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            context.l10n('BEST BET', 'EN İYİ SEÇİM'),
-            style: SoluTheme.labelCaps(context).copyWith(color: moss),
+        onTap: onExplain,
+        child: Ink(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                moss.withValues(alpha: 0.24),
+                scheme.tertiary.withValues(alpha: 0.13),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: moss.withValues(alpha: 0.65)),
           ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    context.l10n('BEST BET', 'EN İYİ SEÇİM'),
+                    style: SoluTheme.labelCaps(context).copyWith(color: moss),
+                  ),
+                  const Spacer(),
+                  Icon(Icons.info_outline, size: 16, color: moss),
+                ],
+              ),
           const SizedBox(height: 6),
           Row(
             children: [
@@ -260,7 +398,23 @@ class _WinnerCard extends StatelessWidget {
               context,
             ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
-        ],
+          if (_nearestMajor(best, preferredTime) case final period?) ...[
+            const SizedBox(height: 8),
+            Text(
+              context.l10nTemplate(
+                'spot_compare_best_window',
+                english: 'Best major window near your plan: {window}',
+                turkish: 'Planınıza en yakın ana dönem: {window}',
+                values: {'window': _formatPeriod(period, best.utcOffset)},
+              ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(color: moss),
+            ),
+          ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -271,29 +425,38 @@ class _SpotRankCard extends StatelessWidget {
     required this.entry,
     required this.rank,
     required this.activeName,
+    required this.preferredTime,
+    required this.onExplain,
     required this.onUse,
   });
   final SpotComparisonEntry entry;
   final int rank;
   final String activeName;
+  final TimeOfDay preferredTime;
+  final VoidCallback onExplain;
   final VoidCallback onUse;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isActive = entry.location.name == activeName;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
+    return Material(
+      color: scheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: rank == 1
-              ? SoluPalette.of(context).neonMoss.withValues(alpha: 0.75)
-              : scheme.outlineVariant.withValues(alpha: 0.5),
-        ),
-      ),
-      child: Row(
+        onTap: onExplain,
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: rank == 1
+                  ? SoluPalette.of(context).neonMoss.withValues(alpha: 0.75)
+                  : scheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Row(
         children: [
           SizedBox(
             width: 28,
@@ -317,6 +480,22 @@ class _SpotRankCard extends StatelessWidget {
                   size: 14,
                   animate: false,
                 ),
+                if (_nearestMajor(entry, preferredTime) case final period?) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    context.l10nTemplate(
+                      'spot_compare_major_window',
+                      english: 'Major {window}',
+                      turkish: 'Ana dönem {window}',
+                      values: {
+                        'window': _formatPeriod(period, entry.utcOffset),
+                      },
+                    ),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -343,7 +522,9 @@ class _SpotRankCard extends StatelessWidget {
               onPressed: onUse,
               icon: const Icon(Icons.check_circle_outline),
             ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -405,3 +586,33 @@ String _factorLabel(BuildContext context, String key) => switch (key) {
   'seasonal' => context.l10n('seasonal daylight', 'mevsimsel gün ışığı'),
   _ => context.l10n('solunar conditions', 'solunar koşullar'),
 };
+
+SolunarPeriod? _nearestMajor(SpotComparisonEntry entry, TimeOfDay time) {
+  final periods = [...entry.day.majorPeriods]
+    ..sort((a, b) => a.peak.compareTo(b.peak));
+  if (periods.isEmpty) return null;
+
+  final requestedMinutes = time.hour * 60 + time.minute;
+  int distanceTo(SolunarPeriod period) {
+    final localPeak = period.peak.add(entry.utcOffset);
+    final difference =
+        (localPeak.hour * 60 + localPeak.minute - requestedMinutes).abs();
+    // A planned time near midnight should compare correctly with a window just
+    // after/before midnight instead of treating the day boundary as 24 hours.
+    return difference > 720 ? 1440 - difference : difference;
+  }
+
+  return periods.reduce(
+    (best, candidate) =>
+        distanceTo(candidate) < distanceTo(best) ? candidate : best,
+  );
+}
+
+String _formatPeriod(SolunarPeriod period, Duration utcOffset) {
+  String clock(DateTime utc) {
+    final local = utc.add(utcOffset);
+    return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+  }
+
+  return '${clock(period.start)}–${clock(period.end)}';
+}

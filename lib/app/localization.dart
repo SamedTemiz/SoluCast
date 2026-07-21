@@ -77,6 +77,24 @@ extension SoluLocalization on BuildContext {
     if (appLanguage == AppLanguage.turkish) return turkish;
     return SoluCopy.lookup(appLanguage, english) ?? english;
   }
+
+  /// Formats a stable translation key. Dynamic values must not be embedded in
+  /// [l10n]'s source-string key, otherwise catalog lookup can never match
+  /// them. Templates use `{name}` placeholders.
+  String l10nTemplate(
+    String key, {
+    required String english,
+    required String turkish,
+    required Map<String, String> values,
+  }) {
+    var template = appLanguage == AppLanguage.turkish
+        ? turkish
+        : SoluCopy.lookup(appLanguage, key) ?? english;
+    for (final value in values.entries) {
+      template = template.replaceAll('{${value.key}}', value.value);
+    }
+    return template;
+  }
 }
 
 const _portugueseBrazil = <String, String>{
@@ -146,6 +164,35 @@ const _portugueseBrazil = <String, String>{
   'Dawn / dusk overlap': 'Sobreposição de amanhecer e anoitecer',
   'Pressure trend': 'Tendência da pressão',
   'Season': 'Estação',
+  'Smart trip alert': 'Alerta inteligente de pesca',
+  'Smart trip alerts': 'Alertas inteligentes de pesca',
+  'ALERT RULE': 'REGRA DE ALERTA',
+  'Minimum day score': 'Pontuação mínima do dia',
+  'Notify before the major window': 'Notificar antes da janela principal',
+  'PLANNED FISHING TIME': 'HORÁRIO DE PESCA PLANEJADO',
+  'When do you plan to fish?': 'Quando você pretende pescar?',
+  'Copy trip brief': 'Copiar resumo da viagem',
+  'Trip brief copied.': 'Resumo da viagem copiado.',
+  'LIVE': 'AO VIVO',
+  'smart_alert_summary':
+      '{score}/5+ dias · {lead} min antes de uma janela principal.',
+  'weather_minutes_ago': 'há {value} min',
+  'weather_hours_ago': 'há {value} h',
+  'spot_compare_best_window':
+      'Melhor janela principal perto do seu plano: {window}',
+  'spot_compare_major_window': 'Principal {window}',
+  'WHEN TO GO': 'QUANDO IR',
+  'Best fishing windows': 'Melhores janelas de pesca',
+  'Next 7 days · active spot': 'Próximos 7 dias · local ativo',
+  'Next 14 days · all spots': 'Próximos 14 dias · todos os locais',
+  'See 14 days and all spots with Pro':
+      'Veja 14 dias e todos os locais com o Pro',
+  'Best windows across 14 days and all spots':
+      'Melhores janelas em 14 dias e todos os locais',
+  'Ranked by the on-device astronomy model; live weather is not part of future-day rankings.':
+      'Classificado pelo modelo astronômico no dispositivo; o clima ao vivo não entra nos dias futuros.',
+  'You are offline, but the solunar times below are computed on this device and remain accurate. Weather refreshes when you reconnect.':
+      'Você está offline, mas os horários solunares abaixo são calculados neste dispositivo e continuam válidos. O clima é atualizado quando você reconectar.',
 };
 
 const _spanishLatinAmerica = <String, String>{
@@ -215,6 +262,35 @@ const _spanishLatinAmerica = <String, String>{
   'Dawn / dusk overlap': 'Coincidencia de amanecer y anochecer',
   'Pressure trend': 'Tendencia de presión',
   'Season': 'Temporada',
+  'Smart trip alert': 'Alerta inteligente de pesca',
+  'Smart trip alerts': 'Alertas inteligentes de pesca',
+  'ALERT RULE': 'REGLA DE ALERTA',
+  'Minimum day score': 'Puntuación mínima del día',
+  'Notify before the major window': 'Avisar antes de la ventana principal',
+  'PLANNED FISHING TIME': 'HORA DE PESCA PREVISTA',
+  'When do you plan to fish?': '¿Cuándo planeas pescar?',
+  'Copy trip brief': 'Copiar resumen de la salida',
+  'Trip brief copied.': 'Resumen de la salida copiado.',
+  'LIVE': 'EN VIVO',
+  'smart_alert_summary':
+      'días de {score}/5+ · {lead} min antes de una ventana principal.',
+  'weather_minutes_ago': 'hace {value} min',
+  'weather_hours_ago': 'hace {value} h',
+  'spot_compare_best_window':
+      'Mejor ventana principal cerca de tu plan: {window}',
+  'spot_compare_major_window': 'Principal {window}',
+  'WHEN TO GO': 'CUÁNDO IR',
+  'Best fishing windows': 'Mejores ventanas de pesca',
+  'Next 7 days · active spot': 'Próximos 7 días · lugar activo',
+  'Next 14 days · all spots': 'Próximos 14 días · todos los lugares',
+  'See 14 days and all spots with Pro':
+      'Ve 14 días y todos los lugares con Pro',
+  'Best windows across 14 days and all spots':
+      'Mejores ventanas en 14 días y todos los lugares',
+  'Ranked by the on-device astronomy model; live weather is not part of future-day rankings.':
+      'Clasificado por el modelo astronómico del dispositivo; el clima en vivo no forma parte de los días futuros.',
+  'You are offline, but the solunar times below are computed on this device and remain accurate. Weather refreshes when you reconnect.':
+      'Estás sin conexión, pero los horarios solunares de abajo se calculan en este dispositivo y siguen siendo válidos. El clima se actualiza cuando vuelvas a conectarte.',
 };
 
 const _french = <String, String>{
@@ -284,6 +360,35 @@ const _french = <String, String>{
   'Dawn / dusk overlap': 'Chevauchement entre aube et crépuscule',
   'Pressure trend': 'Tendance de la pression',
   'Season': 'Saison',
+  'Smart trip alert': 'Alerte de sortie intelligente',
+  'Smart trip alerts': 'Alertes de sortie intelligentes',
+  'ALERT RULE': 'RÈGLE D’ALERTE',
+  'Minimum day score': 'Score minimal de la journée',
+  'Notify before the major window': 'Notifier avant la fenêtre majeure',
+  'PLANNED FISHING TIME': 'HEURE DE PÊCHE PRÉVUE',
+  'When do you plan to fish?': 'Quand prévoyez-vous de pêcher ?',
+  'Copy trip brief': 'Copier le résumé de sortie',
+  'Trip brief copied.': 'Résumé de sortie copié.',
+  'LIVE': 'EN DIRECT',
+  'smart_alert_summary':
+      'journées à {score}/5+ · {lead} min avant une fenêtre majeure.',
+  'weather_minutes_ago': 'il y a {value} min',
+  'weather_hours_ago': 'il y a {value} h',
+  'spot_compare_best_window':
+      'Meilleure fenêtre majeure près de votre créneau : {window}',
+  'spot_compare_major_window': 'Majeure {window}',
+  'WHEN TO GO': 'QUAND PARTIR',
+  'Best fishing windows': 'Meilleures fenêtres de pêche',
+  'Next 7 days · active spot': '7 prochains jours · spot actif',
+  'Next 14 days · all spots': '14 prochains jours · tous les spots',
+  'See 14 days and all spots with Pro':
+      'Voir 14 jours et tous les spots avec Pro',
+  'Best windows across 14 days and all spots':
+      'Meilleures fenêtres sur 14 jours et tous les spots',
+  'Ranked by the on-device astronomy model; live weather is not part of future-day rankings.':
+      'Classement selon le modèle astronomique de l’appareil ; la météo en direct n’entre pas dans les jours futurs.',
+  'You are offline, but the solunar times below are computed on this device and remain accurate. Weather refreshes when you reconnect.':
+      'Vous êtes hors ligne, mais les horaires solunaires ci-dessous sont calculés sur cet appareil et restent exacts. La météo se met à jour dès la reconnexion.',
 };
 
 const _german = <String, String>{
@@ -353,6 +458,35 @@ const _german = <String, String>{
   'Dawn / dusk overlap': 'Überlappung von Morgen- und Abenddämmerung',
   'Pressure trend': 'Luftdrucktrend',
   'Season': 'Jahreszeit',
+  'Smart trip alert': 'Intelligente Angelausflug-Warnung',
+  'Smart trip alerts': 'Intelligente Angelausflug-Warnungen',
+  'ALERT RULE': 'WARNREGEL',
+  'Minimum day score': 'Mindest-Tageswertung',
+  'Notify before the major window': 'Vor dem Hauptfenster benachrichtigen',
+  'PLANNED FISHING TIME': 'GEPLANTE ANGELZEIT',
+  'When do you plan to fish?': 'Wann möchten Sie angeln?',
+  'Copy trip brief': 'Ausflugsübersicht kopieren',
+  'Trip brief copied.': 'Ausflugsübersicht kopiert.',
+  'LIVE': 'LIVE',
+  'smart_alert_summary':
+      '{score}/5+-Tage · {lead} Min. vor einem Hauptfenster.',
+  'weather_minutes_ago': 'vor {value} Min.',
+  'weather_hours_ago': 'vor {value} Std.',
+  'spot_compare_best_window':
+      'Bestes Hauptfenster nahe Ihrer Planung: {window}',
+  'spot_compare_major_window': 'Hauptfenster {window}',
+  'WHEN TO GO': 'WANN LOSGEHEN',
+  'Best fishing windows': 'Beste Angelfenster',
+  'Next 7 days · active spot': 'Nächste 7 Tage · aktiver Spot',
+  'Next 14 days · all spots': 'Nächste 14 Tage · alle Spots',
+  'See 14 days and all spots with Pro':
+      'Mit Pro 14 Tage und alle Spots sehen',
+  'Best windows across 14 days and all spots':
+      'Beste Fenster über 14 Tage und alle Spots',
+  'Ranked by the on-device astronomy model; live weather is not part of future-day rankings.':
+      'Sortiert nach dem Astronomiemodell auf dem Gerät; Live-Wetter fließt bei künftigen Tagen nicht ein.',
+  'You are offline, but the solunar times below are computed on this device and remain accurate. Weather refreshes when you reconnect.':
+      'Du bist offline, aber die Solunarzeiten unten werden auf diesem Gerät berechnet und bleiben korrekt. Das Wetter aktualisiert sich, sobald du wieder online bist.',
 };
 
 const _swedish = <String, String>{
@@ -422,6 +556,34 @@ const _swedish = <String, String>{
   'Dawn / dusk overlap': 'Överlappning mellan gryning och skymning',
   'Pressure trend': 'Lufttryckstrend',
   'Season': 'Säsong',
+  'Smart trip alert': 'Smart fiskelarm',
+  'Smart trip alerts': 'Smarta fiskelarm',
+  'ALERT RULE': 'LARMREGEL',
+  'Minimum day score': 'Lägsta dagsbetyg',
+  'Notify before the major window': 'Meddela före huvudfönstret',
+  'PLANNED FISHING TIME': 'PLANERAD FISKETID',
+  'When do you plan to fish?': 'När planerar du att fiska?',
+  'Copy trip brief': 'Kopiera turöversikt',
+  'Trip brief copied.': 'Turöversikt kopierad.',
+  'LIVE': 'LIVE',
+  'smart_alert_summary':
+      'dagar med {score}/5+ · {lead} min före ett huvudfönster.',
+  'weather_minutes_ago': 'för {value} min sedan',
+  'weather_hours_ago': 'för {value} h sedan',
+  'spot_compare_best_window': 'Bästa huvudfönstret nära din plan: {window}',
+  'spot_compare_major_window': 'Huvudfönster {window}',
+  'WHEN TO GO': 'NÄR DU BÖR ÅKA',
+  'Best fishing windows': 'Bästa fiskefönstren',
+  'Next 7 days · active spot': 'Kommande 7 dagar · aktiv plats',
+  'Next 14 days · all spots': 'Kommande 14 dagar · alla platser',
+  'See 14 days and all spots with Pro':
+      'Se 14 dagar och alla platser med Pro',
+  'Best windows across 14 days and all spots':
+      'Bästa fönstren över 14 dagar och alla platser',
+  'Ranked by the on-device astronomy model; live weather is not part of future-day rankings.':
+      'Rankas av astronomimodellen på enheten; liveväder ingår inte för framtida dagar.',
+  'You are offline, but the solunar times below are computed on this device and remain accurate. Weather refreshes when you reconnect.':
+      'Du är offline, men solunartiderna nedan beräknas på den här enheten och är fortfarande korrekta. Vädret uppdateras när du är ansluten igen.',
 };
 
 const _norwegian = <String, String>{
@@ -491,4 +653,31 @@ const _norwegian = <String, String>{
   'Dawn / dusk overlap': 'Overlapp mellom daggry og skumring',
   'Pressure trend': 'Trykktrend',
   'Season': 'Årstid',
+  'Smart trip alert': 'Smart fiskevarsel',
+  'Smart trip alerts': 'Smarte fiskevarsler',
+  'ALERT RULE': 'VARSELREGEL',
+  'Minimum day score': 'Laveste dagsresultat',
+  'Notify before the major window': 'Varsle før hovedvinduet',
+  'PLANNED FISHING TIME': 'PLANLAGT FISKETID',
+  'When do you plan to fish?': 'Når planlegger du å fiske?',
+  'Copy trip brief': 'Kopier turoversikt',
+  'Trip brief copied.': 'Turoversikt kopiert.',
+  'LIVE': 'LIVE',
+  'smart_alert_summary': 'dager med {score}/5+ · {lead} min før et hovedvindu.',
+  'weather_minutes_ago': 'for {value} min siden',
+  'weather_hours_ago': 'for {value} t siden',
+  'spot_compare_best_window': 'Beste hovedvindu nær planen din: {window}',
+  'spot_compare_major_window': 'Hovedvindu {window}',
+  'WHEN TO GO': 'NÅR DU BØR DRA',
+  'Best fishing windows': 'Beste fiskevinduer',
+  'Next 7 days · active spot': 'Neste 7 dager · aktivt sted',
+  'Next 14 days · all spots': 'Neste 14 dager · alle steder',
+  'See 14 days and all spots with Pro':
+      'Se 14 dager og alle steder med Pro',
+  'Best windows across 14 days and all spots':
+      'Beste vinduer over 14 dager og alle steder',
+  'Ranked by the on-device astronomy model; live weather is not part of future-day rankings.':
+      'Rangert av astronomimodellen på enheten; livevær inngår ikke for fremtidige dager.',
+  'You are offline, but the solunar times below are computed on this device and remain accurate. Weather refreshes when you reconnect.':
+      'Du er frakoblet, men solunartidene nedenfor beregnes på denne enheten og er fortsatt korrekte. Været oppdateres når du kobler til igjen.',
 };

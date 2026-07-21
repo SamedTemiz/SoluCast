@@ -8,8 +8,10 @@ import '../../app/theme.dart';
 import '../../core/core.dart';
 import '../notifications/notification_providers.dart';
 import '../shared/entitlement.dart';
+import '../shared/upgrade_sheet.dart';
 import '../shared/widgets/reveal.dart';
 import '../today/today_format.dart';
+import 'smart_alert_controls.dart';
 import 'settings_providers.dart';
 
 const _privacyPolicyUrl =
@@ -209,6 +211,53 @@ class SettingsScreen extends ConsumerWidget {
                           .setHighScoreAlert(value),
                     ),
                   ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    activeThumbColor: scheme.tertiary,
+                    title: Text(
+                      context.l10n('Smart trip alert', 'Akıllı av uyarısı'),
+                    ),
+                    subtitle: Text(
+                      isPro
+                          ? context.l10nTemplate(
+                              'smart_alert_summary',
+                              english:
+                                  '{score}/5+ days · {lead} min before a major window.',
+                              turkish:
+                                  '{score}/5+ günlerde · ana dönemden {lead} dk önce.',
+                              values: {
+                                'score': '${notif.smartMinRating}',
+                                'lead': '${notif.smartLeadMinutes}',
+                              },
+                            )
+                          : 'Pro',
+                      style: TextStyle(
+                        color: isPro ? scheme.onSurfaceVariant : moss,
+                        fontWeight: isPro ? null : FontWeight.w700,
+                      ),
+                    ),
+                    value: notif.smartAlert && isPro,
+                    onChanged: !isPro
+                        ? (_) => showUpgradeTeaser(
+                            context,
+                            ref,
+                            feature: context.l10n(
+                              'Smart trip alerts',
+                              'Akıllı av uyarıları',
+                            ),
+                          )
+                        : (value) => setNotification(
+                            value,
+                            () => ref
+                                .read(notificationSettingsProvider.notifier)
+                                .setSmartAlert(value),
+                          ),
+                  ),
+                  if (isPro && notif.smartAlert) ...[
+                    const SizedBox(height: 4),
+                    SmartAlertControls(notif: notif),
+                    const Divider(height: 24),
+                  ],
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(

@@ -6,8 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/localization.dart';
 import '../../app/theme.dart';
 import '../../core/core.dart';
+import '../best_window/best_window_card.dart';
+import '../best_window/best_window_providers.dart';
 import '../day_detail/period_presentation.dart';
 import '../settings/settings_providers.dart';
+import '../shared/score_explanation_sheet.dart';
 import '../weather/weather_providers.dart';
 import 'today_format.dart';
 import 'today_providers.dart';
@@ -29,8 +32,9 @@ class _TodayViewState extends ConsumerState<TodayView> {
   late DateTime _now = DateTime.now().toUtc();
 
   Future<void> _onRefresh() async {
-    ref.invalidate(activeWeatherProvider);
-    await Future.delayed(const Duration(milliseconds: 350));
+    await refreshWeather(ref, ref.read(activeLocationProvider));
+    // "Şimdi" tarama anında donduğu için geçmişte kalan pencereleri ayıkla.
+    ref.invalidate(bestWindowsProvider);
     setState(() => _now = DateTime.now().toUtc());
   }
 
@@ -42,6 +46,10 @@ class _TodayViewState extends ConsumerState<TodayView> {
       use24h: ref.watch(use24hProvider),
       turkish: context.isTurkish,
     );
+    // Ağ yoksa ve cache de boşsa hava çözülemez; ama solunar/astronomi cihazda
+    // hesaplandığından geçerlidir — kullanıcıya bunu açıkça söyle.
+    final weatherAsync = ref.watch(activeWeatherProvider);
+    final isOffline = !weatherAsync.isLoading && weatherAsync.asData?.value == null;
 
     return SafeArea(
       top: false,
@@ -54,7 +62,15 @@ class _TodayViewState extends ConsumerState<TodayView> {
             const SizedBox(height: 16),
             Reveal(
               delay: const Duration(milliseconds: 60),
-              child: _ConditionCard(result: result),
+              child: _ConditionCard(
+                result: result,
+                use24h: ref.watch(use24hProvider),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Reveal(
+              delay: const Duration(milliseconds: 100),
+              child: const BestWindowCard(),
             ),
             const SizedBox(height: 12),
             Reveal(
@@ -62,6 +78,13 @@ class _TodayViewState extends ConsumerState<TodayView> {
               child: _TimelineCard(result: result, fmt: fmt, now: _now),
             ),
             const SizedBox(height: 12),
+            if (isOffline) ...[
+              Reveal(
+                delay: const Duration(milliseconds: 180),
+                child: const _OfflineReassuranceBanner(),
+              ),
+              const SizedBox(height: 12),
+            ],
             Reveal(
               delay: const Duration(milliseconds: 200),
               child: const _WeatherRow(),
@@ -87,6 +110,45 @@ Color _ratingColor(BuildContext context, int rating) {
   return scheme.outline;
 }
 
+/// Çevrimdışıyken görünen güven bandı — en savunulabilir teknik farkımızı
+/// (cihazda hesaplanan astronomi) tam gerektiği anda kullanıcıya gösterir.
+class _OfflineReassuranceBanner extends StatelessWidget {
+  const _OfflineReassuranceBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final moss = SoluPalette.of(context).neonMoss;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: moss.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: moss.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.cloud_off_outlined, size: 18, color: moss),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              context.l10n(
+                'You are offline, but the solunar times below are computed on this device and remain accurate. Weather refreshes when you reconnect.',
+                'Çevrimdışısınız, ancak aşağıdaki solunar saatleri bu cihazda hesaplanır ve geçerlidir. Hava, bağlantı gelince güncellenir.',
+              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: scheme.onSurface,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _TodayDateHeader extends StatelessWidget {
   const _TodayDateHeader({required this.result});
   final DayResult result;
@@ -108,8 +170,9 @@ class _TodayDateHeader extends StatelessWidget {
 }
 
 class _ConditionCard extends StatelessWidget {
-  const _ConditionCard({required this.result});
+  const _ConditionCard({required this.result, required this.use24h});
   final DayResult result;
+  final bool use24h;
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +310,12 @@ class _ConditionCard extends StatelessWidget {
                   FishRating(rating: solunar.fishRating, size: 30),
                   const SizedBox(height: 16),
                   OutlinedButton.icon(
-                    onPressed: () => _showFactors(context, solunar),
+                    onPressed: () => showScoreExplanation(
+                      context,
+                      day: solunar,
+                      ephemeris: result.ephemeris,
+                      use24h: use24h,
+                    ),
                     icon: const Icon(Icons.analytics_outlined, size: 18),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: scheme.onSurface,
@@ -344,105 +412,6 @@ class _ConditionBackdropPainter extends CustomPainter {
   @override
   bool shouldRepaint(_ConditionBackdropPainter old) =>
       old.accent != accent || old.rating != rating;
-}
-
-void _showFactors(BuildContext context, SolunarDay day) {
-  final scheme = Theme.of(context).colorScheme;
-  final text = Theme.of(context).textTheme;
-  final moss = SoluPalette.of(context).neonMoss;
-  showModalBottomSheet(
-    context: context,
-    showDragHandle: true,
-    builder: (sheetContext) => SafeArea(
-      top: false,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.l10n(
-                'Why ${day.fishRating}/5?',
-                'Neden ${day.fishRating}/5?',
-              ),
-              style: text.headlineMedium,
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Text(
-                  context.l10n('SCORE ', 'PUAN '),
-                  style: SoluTheme.labelCaps(context),
-                ),
-                Text(
-                  '${day.score}',
-                  style: SoluTheme.dataMono(context, size: 14, color: moss),
-                ),
-                Text(
-                  ' / 100',
-                  style: SoluTheme.dataMono(
-                    context,
-                    size: 14,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ...day.factors.map(
-              (f) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          TodayFormat.factorLabel(
-                            f.key,
-                            turkish: context.isTurkish,
-                          ),
-                          style: text.bodyMedium,
-                        ),
-                        Text(
-                          '+${f.contribution.round()}',
-                          style: SoluTheme.dataMono(
-                            context,
-                            size: 14,
-                            color: moss,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
-                      child: LinearProgressIndicator(
-                        value: f.raw,
-                        minHeight: 6,
-                        color: scheme.tertiary,
-                        backgroundColor: scheme.surfaceContainerHighest,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              context.l10n(
-                'Astronomy is computed on-device, offline.',
-                'Astronomi cihazda ve çevrimdışı hesaplanır.',
-              ),
-              style: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }
 
 class _TimelineCard extends StatelessWidget {
@@ -621,7 +590,12 @@ class _WeatherRow extends ConsumerWidget {
                     context.l10n('offline', 'çevrimdışı'),
                     style: SoluTheme.labelCaps(context),
                   )
-                : null),
+                : weather == null
+                ? null
+                : Text(
+                    _weatherAgeLabel(context, weather.fetchedAt),
+                    style: SoluTheme.labelCaps(context),
+                  )),
       child: Row(
         children: [
           Expanded(
@@ -652,6 +626,29 @@ class _WeatherRow extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _weatherAgeLabel(BuildContext context, DateTime fetchedAt) {
+  final minutes = DateTime.now()
+      .toUtc()
+      .difference(fetchedAt.toUtc())
+      .inMinutes;
+  if (minutes < 2) return context.l10n('LIVE', 'CANLI');
+  if (minutes < 60) {
+    return context.l10nTemplate(
+      'weather_minutes_ago',
+      english: '{value}m ago',
+      turkish: '{value} dk önce',
+      values: {'value': '$minutes'},
+    );
+  }
+  final hours = minutes ~/ 60;
+  return context.l10nTemplate(
+    'weather_hours_ago',
+    english: '{value}h ago',
+    turkish: '{value} sa önce',
+    values: {'value': '$hours'},
+  );
 }
 
 /// Basınç trend oku — balıkçı için kritik (düşen = yeşil/aktif, screens.md).

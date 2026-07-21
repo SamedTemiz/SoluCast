@@ -21,6 +21,20 @@ class ProPreview extends Notifier<bool> {
 
 final isProPreviewProvider = NotifierProvider<ProPreview, bool>(ProPreview.new);
 
+/// Notification scheduling must not synchronously depend on a purchase-state
+/// write. HomeShell updates this gate after the current frame, which lets a
+/// Pro transition cancel Smart Alert IDs without triggering Riverpod rebuilds
+/// while an overlay/paywall is building.
+class SmartAlertsEntitlement extends Notifier<bool> {
+  @override
+  bool build() => ref.read(isProPreviewProvider);
+
+  void setAllowed(bool value) => state = value;
+}
+
+final smartAlertsEntitlementProvider =
+    NotifierProvider<SmartAlertsEntitlement, bool>(SmartAlertsEntitlement.new);
+
 /// F4.3: ücretsizde bugün + yarın detay açık; **ileri** günler Pro gerektirir.
 /// Geçmiş günler kilitli değildir (zaten olmuş, astronomi zaten hesaplanabilir).
 bool isDateLocked({

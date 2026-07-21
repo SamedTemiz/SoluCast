@@ -44,6 +44,10 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Android build cache + machine-specific SDK paths (asla commit edilmez)
+**/.gradle/
+**/local.properties
+
 # Secrets / environment — asla commit edilmez
 *.env
 .env*

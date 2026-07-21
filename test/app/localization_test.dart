@@ -35,4 +35,29 @@ void main() {
       );
     },
   );
+
+  test('new Pro and trip-brief copy is present in every released catalog', () {
+    const keys = [
+      'Smart trip alert',
+      'ALERT RULE',
+      'PLANNED FISHING TIME',
+      'Copy trip brief',
+      'Trip brief copied.',
+      'smart_alert_summary',
+      'weather_minutes_ago',
+      'spot_compare_best_window',
+    ];
+    for (final language in AppLanguage.values.where(
+      (language) =>
+          language != AppLanguage.english && language != AppLanguage.turkish,
+    )) {
+      for (final key in keys) {
+        expect(
+          SoluCopy.lookup(language, key),
+          isNotNull,
+          reason: '$language: $key',
+        );
+      }
+    }
+  });
 }

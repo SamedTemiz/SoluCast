@@ -12,11 +12,16 @@ class SpotComparison {
   final List<SpotComparisonEntry> entries;
 
   factory SpotComparison.fromDays(
-    Iterable<({SavedLocation location, SolunarDay day})> days,
+    Iterable<({SavedLocation location, SolunarDay day, Duration utcOffset})>
+    days,
   ) {
     final entries = [
       for (final value in days)
-        SpotComparisonEntry(location: value.location, day: value.day),
+        SpotComparisonEntry(
+          location: value.location,
+          day: value.day,
+          utcOffset: value.utcOffset,
+        ),
     ]..sort((a, b) => b.day.score.compareTo(a.day.score));
     return SpotComparison._(List.unmodifiable(entries));
   }
@@ -57,10 +62,15 @@ class SpotComparison {
 }
 
 class SpotComparisonEntry {
-  const SpotComparisonEntry({required this.location, required this.day});
+  const SpotComparisonEntry({
+    required this.location,
+    required this.day,
+    this.utcOffset = Duration.zero,
+  });
 
   final SavedLocation location;
   final SolunarDay day;
+  final Duration utcOffset;
 }
 
 class SpotComparisonFactorDifference {

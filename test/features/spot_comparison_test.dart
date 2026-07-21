@@ -35,8 +35,16 @@ void main() {
 
   test('ranks spots by their displayed score and reports the lead', () {
     final comparison = SpotComparison.fromDays([
-      (location: istanbul, day: day(46, [factor('moon_phase', 20)])),
-      (location: miami, day: day(67, [factor('moon_phase', 32)])),
+      (
+        location: istanbul,
+        day: day(46, [factor('moon_phase', 20)]),
+        utcOffset: Duration.zero,
+      ),
+      (
+        location: miami,
+        day: day(67, [factor('moon_phase', 32)]),
+        utcOffset: Duration.zero,
+      ),
     ]);
 
     expect(comparison.best?.location, miami);
@@ -48,10 +56,12 @@ void main() {
       (
         location: istanbul,
         day: day(55, [factor('moon_phase', 24), factor('seasonal', 18)]),
+        utcOffset: Duration.zero,
       ),
       (
         location: miami,
         day: day(71, [factor('moon_phase', 36), factor('seasonal', 20)]),
+        utcOffset: Duration.zero,
       ),
     ]);
 
@@ -62,8 +72,16 @@ void main() {
 
   test('does not claim an advantage for tied spots', () {
     final comparison = SpotComparison.fromDays([
-      (location: istanbul, day: day(55, [factor('moon_phase', 20)])),
-      (location: miami, day: day(55, [factor('moon_phase', 20)])),
+      (
+        location: istanbul,
+        day: day(55, [factor('moon_phase', 20)]),
+        utcOffset: Duration.zero,
+      ),
+      (
+        location: miami,
+        day: day(55, [factor('moon_phase', 20)]),
+        utcOffset: Duration.zero,
+      ),
     ]);
 
     expect(comparison.lead, 0);

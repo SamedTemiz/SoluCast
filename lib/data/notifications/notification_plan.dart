@@ -2,7 +2,7 @@
 /// Servis katmanı bu planı alıp cihazda zamanlar (F5).
 library;
 
-enum PlannedKind { dailySummary, highScoreAlert }
+enum PlannedKind { dailySummary, highScoreAlert, smartWindowAlert }
 
 /// Zamanlanacak tek bir bildirim. [scheduledLocal] konumun yerel duvar saati;
 /// servis onu konumun IANA tz'sinde TZDateTime'a çevirir (DST doğru).
@@ -27,17 +27,31 @@ class NotifiableDay {
   final DateTime localDate;
   final int fishRating; // 1..5
   final String? firstMajorWindow; // "06:40–08:40" (yoksa null)
+  final DateTime? firstMajorStartLocal;
+  final List<NotifiableMajorWindow> majorWindows;
 
   const NotifiableDay({
     required this.localDate,
     required this.fishRating,
     this.firstMajorWindow,
+    this.firstMajorStartLocal,
+    this.majorWindows = const [],
   });
+}
+
+/// A major solunar window expressed in the spot's local wall-clock time.
+class NotifiableMajorWindow {
+  const NotifiableMajorWindow({required this.startLocal, required this.label});
+
+  final DateTime startLocal;
+  final String label;
 }
 
 /// Kimlik aralıkları — yeniden planlamada çakışmayı önler (stabil id).
 const dailySummaryIdBase = 1000;
 const highScoreIdBase = 2000;
+const smartWindowIdBase = 3000;
+const maxSmartWindowsPerDay = 4;
 
 /// IDs owned by the rolling forecast scheduler. Period reminders use a
 /// different range and must survive an automatic forecast refresh.
@@ -45,6 +59,9 @@ Iterable<int> managedForecastNotificationIds({int days = 14}) sync* {
   for (var i = 0; i < days; i++) {
     yield dailySummaryIdBase + i;
     yield highScoreIdBase + i;
+    for (var window = 0; window < maxSmartWindowsPerDay; window++) {
+      yield smartWindowIdBase + i * maxSmartWindowsPerDay + window;
+    }
   }
 }
 
@@ -63,6 +80,9 @@ List<PlannedNotification> planNotifications({
   int summaryMinute = 0,
   int alertHour = 18,
   int highScoreThreshold = 4,
+  bool smartAlertEnabled = false,
+  int smartMinRating = 4,
+  int smartLeadMinutes = 30,
   bool turkish = false,
 }) {
   final planned = <PlannedNotification>[];
@@ -120,6 +140,43 @@ List<PlannedNotification> planNotifications({
             body: turkish
                 ? 'Planınızı yapın — koşullar yarın uyumlu.'
                 : 'Plan your trip — conditions line up tomorrow.',
+          ),
+        );
+      }
+    }
+
+    if (smartAlertEnabled && day.fishRating >= smartMinRating) {
+      final windows = day.majorWindows.isNotEmpty
+          ? day.majorWindows
+          : day.firstMajorStartLocal == null
+          ? const <NotifiableMajorWindow>[]
+          : [
+              NotifiableMajorWindow(
+                startLocal: day.firstMajorStartLocal!,
+                label: day.firstMajorWindow ?? '',
+              ),
+            ];
+      for (
+        var windowIndex = 0;
+        windowIndex < windows.length && windowIndex < maxSmartWindowsPerDay;
+        windowIndex++
+      ) {
+        final window = windows[windowIndex];
+        final at = window.startLocal.subtract(
+          Duration(minutes: smartLeadMinutes),
+        );
+        if (!at.isAfter(nowLocal)) continue;
+        planned.add(
+          PlannedNotification(
+            id: smartWindowIdBase + i * maxSmartWindowsPerDay + windowIndex,
+            kind: PlannedKind.smartWindowAlert,
+            scheduledLocal: at,
+            title: turkish
+                ? 'Balıkçılık penceresi yaklaşıyor'
+                : 'A strong fishing window is near',
+            body: turkish
+                ? '${day.fishRating}/5 gün — ana dönem ${window.label}'
+                : '${day.fishRating}/5 day — major window ${window.label}',
           ),
         );
       }

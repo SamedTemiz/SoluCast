@@ -6,6 +6,7 @@ import '../calendar/calendar_screen.dart';
 import '../locations/locations_screen.dart';
 import '../notifications/notification_providers.dart';
 import '../settings/settings_screen.dart';
+import '../shared/entitlement.dart';
 import '../shared/location_switcher_sheet.dart';
 import '../today/today_screen.dart';
 import '../today/today_providers.dart';
@@ -56,6 +57,16 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
+    // A Pro transition can originate in a paywall overlay. Defer the
+    // notification-gate write until that frame is complete; doing it directly
+    // from the provider graph causes "markNeedsBuild during build" in Flutter.
+    ref.listen<bool>(isProPreviewProvider, (_, isPro) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(smartAlertsEntitlementProvider.notifier).setAllowed(isPro);
+      });
+    });
+
     // Plan (tercih/konum/skor) değiştikçe bildirimleri yeniden kurar —
     // her açılışta da çalışır → self-healing (T4).
     ref.watch(notificationSchedulerProvider);
